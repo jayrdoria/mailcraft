@@ -1,0 +1,609 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <title>Email</title>
+    <style type="text/css">
+      /* Add the new CSS code here */
+      .main-container {
+        display: flex;
+        justify-content: center;
+      }
+
+      /* Update the existing CSS code */
+      body {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: #ececec;
+        text-align: center;
+        font-family: "Open sans", Helvetica, Arial, sans-serif;
+        font-size: 17px;
+        line-height: 1.5;
+        -webkit-text-size-adjust: 100%;
+        -webkit-font-smoothing: antialiased;
+        mso-margin-top-alt: 0;
+        mso-margin-bottom-alt: 0;
+        mso-padding-alt: 0;
+      }
+      .shadow-row td {
+        position: relative;
+      }
+
+      .shadow-row td::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        box-shadow: 0 10px 10px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+      }
+      html {
+        width: 100%;
+      }
+      img {
+        max-width: 100%;
+        border: 0;
+        text-decoration: none;
+        outline: 0;
+        -ms-interpolation-mode: bicubic;
+      }
+      .link a,
+      a.link {
+        color: #f15f5e !important;
+      }
+      .link a:hover,
+      a.link:hover {
+        color: #f15f5e !important;
+      }
+      a,
+      a:visited {
+        color: #ef5e5e;
+        text-decoration: underline;
+      }
+      a:active,
+      a:hover {
+        color: #ef5e5e;
+      }
+      table {
+        border-collapse: collapse;
+        font-family: Roboto, Helvetica, Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.5;
+        mso-table-lspace: 0;
+        mso-table-rspace: 0;
+      }
+      p,
+      h1,
+      h2,
+      h3,
+      h4,
+      span {
+        color: white;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+      .responsive-link {
+        display: inline-block;
+        margin-right: 20px;
+        text-align: center;
+      }
+      #img18 {
+        width: 7vh;
+      }
+      .responsive-img {
+        width: 100%;
+        height: auto;
+        vertical-align: middle;
+      }
+      .signLine {
+        max-width: 100%;
+        width: 100%;
+      }
+      .logoImg {
+        padding: 2vh 0 0 2vh;
+        max-width: 40%;
+      }
+      @media only screen and (max-width: 640px) {
+        body {
+          width: auto !important;
+        }
+        body .main,
+        body[yahoo] .main {
+          width: 440px !important;
+        }
+        .logoImg {
+          max-width: 20%;
+        }
+      }
+      @media only screen and (max-width: 375px) {
+        .logoImg {
+          max-width: 40%;
+        }
+      }
+      @media only screen and (max-width: 768px) {
+        .logoImg {
+          max-width: 40%;
+        }
+      }
+      @media only screen and (max-width: 1425px) and (min-width: 769px) {
+        .logoImg {
+          max-width: 25%;
+        }
+      }
+      @media only screen and (max-width: 479px) {
+        body {
+          width: auto !important;
+        }
+        body .main,
+        body[yahoo] .main {
+          width: 100% !important;
+        }
+
+        .footerImg {
+          max-width: 103%;
+        }
+        .logoImg {
+          max-width: 40%;
+        }
+      }
+
+      .CTAButton {
+        box-shadow: 0px 1px 0px 0px #000b10;
+        background-color: #ef5e5e;
+        border-radius: 16px;
+        display: inline-block;
+        cursor: pointer;
+        color: white;
+        font-family: Arial;
+        font-size: 15px;
+        font-weight: bold;
+        padding: 6px 24px;
+        text-decoration: none;
+        width: 30%;
+        margin-left: -23px;
+        margin-bottom: 2%;
+      }
+      .CTAButton:hover {
+        color: white;
+        background-color: #ef5e5e;
+      }
+      .CTAButton:active {
+        position: relative;
+        top: 1px;
+      }
+      .marked {
+        color: #f15f5e;
+      }
+      .bonus {
+        font-size: 20px;
+        color: #f15f5e;
+      }
+      @media screen and (max-width: 768px) {
+        .marked {
+          font-size: 28px;
+        }
+        .responsive-link {
+          margin-right: 10px;
+        }
+
+        .responsive-img {
+          max-width: 80px; /* adjust as needed */
+        }
+      }
+
+      @media screen and (max-width: 480px) {
+        .marked {
+          font-size: 28px;
+        }
+        .responsive-link {
+          margin-right: 5px;
+        }
+
+        .responsive-img {
+          max-width: 60px; /* adjust as needed */
+        }
+      }
+    </style>
+  </head>
+  *|IF:DOMAIN_URL=stakescasino.com|*
+  <body
+    yahoo="fix"
+    leftmargin="0"
+    topmargin="0"
+    marginwidth="0"
+    marginheight="0"
+  >
+    <div class="main-container">
+      <table
+        width="100%"
+        border="0"
+        align="center"
+        cellpadding="0"
+        cellspacing="0"
+        bgcolor="#ececec"
+        module="Menu"
+      >
+        <tbody>
+          <tr>
+            <td align="center" valign="top">
+              <table
+                width="560"
+                border="0"
+                align="center"
+                bgcolor="#000b10"
+                cellpadding="0"
+                cellspacing="0"
+                class="main"
+                style="border-radius: 0 0 5px 5px"
+              >
+                <tbody>
+                  <tr style="background-color: #000b10">
+                    <td>
+                      <a href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*&gt;">
+                        <!-- <img class="logoImg" src="https://scdn.ntgm.rocks/image/stakes/auto/auto/stakes logooo.png"> -->
+                        <img
+                          src="https://stakescasino.com/client/18f60b553604e8738630e88164cdd260.svg"
+                        />
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <a href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*&gt;"
+                        ><img
+                          class="bannerImg"
+                          style="max-width: 96.6%; padding: 10px"
+                          src="https://scdn.ntgm.rocks/image/stakes/auto/auto/STK_Banner_Email%20Verification_EN.jpg"
+                      /></a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <table
+                        border="0"
+                        align="left"
+                        cellpadding="0"
+                        cellspacing="0"
+                        style="width: 100%"
+                      >
+                        <tbody>
+                          <tr>
+                            <td
+                              align="center"
+                              class="editor mce-content-body"
+                              id="mce_6"
+                            >
+                              <p
+                                class="marked"
+                                style="
+                                  font-size: 24px;
+                                  letter-spacing: 2px;
+                                  color: #ffffff;
+                                "
+                              >
+                                <strong>Hello *|PLAYER_FNAME|*,</strong>
+                              </p>
+                              <br />
+                              <p>Welcome to Stakes!</p>
+                              <br />
+                              <p style="color: #ffffff">
+                                Please help us confirm it’s you by clicking on
+                                the button below to verify your email address.
+                              </p>
+                              <br />
+                              <a
+                                href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*"
+                                class="CTAButton"
+                                style="color: white"
+                                >Let's go!</a
+                              >
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr class="shadow-row">
+                    <td
+                      align="center"
+                      valign="center"
+                      style="max-width: 96.6%; padding: 10px"
+                    >
+                      <img
+                        class="signLine"
+                        src="https://scdn.ntgm.rocks/image/stakes/auto/auto/STK_VIP%20Signature_EN3.jpg"
+                      />
+                    </td>
+                  </tr>
+                  <!-- #footer -->
+                  <tr>
+                    <td
+                      align="center"
+                      valign="t op"
+                      style="padding: 0px 80px 0 80px"
+                    >
+                      <hr
+                        style="
+                          border-top: 1px solid #404040;
+                          opacity: 0.3;
+                          margin: 0;
+                        "
+                      />
+                      <br />
+                      <a
+                        href="https://stakescasino.com/responsible-gaming"
+                        style="text-decoration: none"
+                        target="_blank"
+                      >
+                        <img
+                          src="https://kgc-igpcms-staging.s3.eu-central-1.amazonaws.com/twn/footers/logo_e4841c873d.webp"
+                          width="28"
+                          alt=""
+                          style="opacity: 0.8"
+                        />
+                      </a>
+                      &nbsp;&nbsp;&nbsp;&nbsp;
+                      <a
+                        href="https://www.gamcare.org.uk/"
+                        style="text-decoration: none"
+                        target="_blank"
+                      >
+                        <img
+                          src="https://igpcms-production.s3.eu-central-1.amazonaws.com/bfk/footers/Frame%202%20%283%29_3c4cfc2c7d.webp"
+                          width="90"
+                          alt=""
+                          style="opacity: 0.8"
+                        />
+                      </a>
+                      &nbsp;&nbsp;&nbsp;&nbsp;
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        /* font-family: Poppins, sans-serif; */
+                        /* font-size: 15px; */
+                        /* line-height: 18px; */
+                        text-align: center;
+                        /* color: #000000; */
+                        /* font-weight: 400; */
+                        padding: 24px 35px 24px 35px;
+                        opacity: 0.8;
+                      "
+                    >
+                      <span>
+                        This website is licensed under Boni Tech Limited, a
+                        company incorporated under the laws of Saint Lucia with
+                        registration number 2023-00614 and registered address in
+                        Saint Lucia, Boni Tech Limited is licensed and regulated
+                        in Tobique First Nation by the Tobique Gaming
+                        Commission, with license number 0000018 issued on
+                        16/08/2024.
+                      </span>
+                      <br /><br />
+                      <span>
+                        Gambling can be addictive, please Play Responsibly. For
+                        help visit our
+                        <a
+                          href="https://stakescasino.com/responsible-gaming"
+                          style="font-weight: 700"
+                          >Responsible Gambling</a
+                        >
+                        page. Underage gambling is an offence. 18+</span
+                      >
+                      <br /><br />
+                      <span> Copyright ©2025 Stakes Casino. </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+  *|ELSE:|*
+  <body
+    yahoo="fix"
+    leftmargin="0"
+    topmargin="0"
+    marginwidth="0"
+    marginheight="0"
+  >
+    <div class="main-container">
+      <table
+        width="100%"
+        border="0"
+        align="center"
+        cellpadding="0"
+        cellspacing="0"
+        bgcolor="#ececec"
+        module="Menu"
+      >
+        <tbody>
+          <tr>
+            <td align="center" valign="top">
+              <table
+                width="560"
+                border="0"
+                align="center"
+                bgcolor="#000b10"
+                cellpadding="0"
+                cellspacing="0"
+                class="main"
+                style="border-radius: 0 0 5px 5px"
+              >
+                <tbody>
+                  <tr style="background-color: #000b10">
+                    <td align="center">
+                      <a href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*&gt;">
+                        <img
+                          src="https://gallery.mailchimp.com/d9ac2f74431f1607601b4374c/images/0b1dabae-9c94-4f11-9b49-8161672d93f8.png"
+                        />
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <a href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*&gt;"
+                        ><img
+                          class="bannerImg"
+                          style="max-width: 96.6%; padding: 10px"
+                          src="https://scdn.ntgm.rocks/image/stakes/auto/auto/STK_Banner_Email%20Verification_EN.jpg"
+                      /></a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <table
+                        border="0"
+                        align="left"
+                        cellpadding="0"
+                        cellspacing="0"
+                        style="width: 100%"
+                      >
+                        <tbody>
+                          <tr>
+                            <td
+                              align="center"
+                              class="editor mce-content-body"
+                              id="mce_6"
+                            >
+                              <p
+                                class="marked"
+                                style="
+                                  font-size: 24px;
+                                  letter-spacing: 2px;
+                                  color: #ffffff;
+                                "
+                              >
+                                <strong>Hello *|PLAYER_FNAME|*,</strong>
+                              </p>
+                              <br />
+                              <p>Welcome to Stakes!</p>
+                              <br />
+                              <p style="color: #ffffff">
+                                Please help us confirm it’s you by clicking on
+                                the button below to verify your email address.
+                              </p>
+                              <br />
+                              <a
+                                href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*"
+                                class="CTAButton"
+                                style="color: white"
+                                >Let's go!</a
+                              >
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr class="shadow-row">
+                    <td
+                      align="center"
+                      valign="center"
+                      style="max-width: 96.6%; padding: 10px"
+                    >
+                      <img
+                        class="signLine"
+                        src="https://scdn.ntgm.rocks/image/stakes/auto/auto/STK_VIP%20Signature_EN3.jpg"
+                      />
+                    </td>
+                  </tr>
+                  <!-- #footer -->
+                  <tr>
+                    <td
+                      align="center"
+                      valign="t op"
+                      style="padding: 0px 80px 0 80px"
+                    >
+                      <hr
+                        style="
+                          border-top: 1px solid #404040;
+                          opacity: 0.3;
+                          margin: 0;
+                        "
+                      />
+                      <br />
+                      <a
+                        href="https://stakes.com/responsible-gaming"
+                        style="text-decoration: none"
+                        target="_blank"
+                      >
+                        <img
+                          src="https://kgc-igpcms-staging.s3.eu-central-1.amazonaws.com/twn/footers/logo_e4841c873d.webp"
+                          width="28"
+                          alt=""
+                          style="opacity: 0.8"
+                        />
+                      </a>
+                      &nbsp;&nbsp;&nbsp;&nbsp;
+                      <a
+                        href="https://www.gamcare.org.uk/"
+                        style="text-decoration: none"
+                        target="_blank"
+                      >
+                        <img
+                          src="https://igpcms-production.s3.eu-central-1.amazonaws.com/bfk/footers/Frame%202%20%283%29_3c4cfc2c7d.webp"
+                          width="90"
+                          alt=""
+                          style="opacity: 0.8"
+                        />
+                      </a>
+                      &nbsp;&nbsp;&nbsp;&nbsp;
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        /* font-family: Poppins, sans-serif; */
+                        /* font-size: 15px; */
+                        /* line-height: 18px; */
+                        text-align: center;
+                        /* color: #000000; */
+                        /* font-weight: 400; */
+                        padding: 24px 35px 24px 35px;
+                        opacity: 0.8;
+                      "
+                    >
+                      <span>
+                        Gambling can be addictive, please Play Responsibly. For
+                        help visit our
+                        <a
+                          href="https://stakes.com/responsible-gaming"
+                          style="font-weight: 700"
+                          >Responsible Gambling</a
+                        >
+                        page. Underage gambling is an offence. 18+</span
+                      >
+                      <br /><br />
+                      <span> Copyright ©2025 Stakes Casino. </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+  *|END:IF|*
+</html>

@@ -1,0 +1,470 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <title>Email</title>
+    <style type="text/css">
+      /* Add the new CSS code here */
+      .main-container {
+        display: flex;
+        justify-content: left;
+      }
+      .bannerImg {
+        border-bottom: 2px solid #ff32fa;
+        box-shadow: 0px 10px 20px -5px rgba(255, 50, 250, 0.5);
+      }
+      /* Update the existing CSS code */
+      body {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: #ececec;
+        text-align: left;
+        font-family: "Open sans", Helvetica, Arial, sans-serif;
+        font-size: 17px;
+        line-height: 1.5;
+        -webkit-text-size-adjust: 100%;
+        -webkit-font-smoothing: antialiased;
+        mso-margin-top-alt: 0;
+        mso-margin-bottom-alt: 0;
+        mso-padding-alt: 0;
+      }
+      .shadow-row td {
+        position: relative;
+      }
+
+      .shadow-row td::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        box-shadow: 0 10px 10px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+      }
+      html {
+        width: 100%;
+      }
+      img {
+        max-width: 100%;
+        border: 0;
+        text-decoration: none;
+        outline: 0;
+        -ms-interpolation-mode: bicubic;
+      }
+      .link a,
+      a.link {
+        color: #8a98b7 !important;
+      }
+      .link a:hover,
+      a.link:hover {
+        color: #147366 !important;
+      }
+      a,
+      a:visited {
+        color: #2bbaa7;
+        text-decoration: underline;
+      }
+      a:active,
+      a:hover {
+        color: #8a98b7;
+      }
+      table {
+        border-collapse: collapse;
+        font-family: Roboto, Helvetica, Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.5;
+        mso-table-lspace: 0;
+        mso-table-rspace: 0;
+      }
+      p,
+      h1,
+      h2,
+      h3,
+      h4 {
+        color: white;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+      .responsive-link {
+        display: inline-block;
+        margin-right: 20px;
+        text-align: left;
+      }
+      #img18 {
+        width: 7vh;
+      }
+      .responsive-img {
+        width: auto;
+        height: 30px;
+        vertical-align: middle;
+        display: inline-block;
+        padding-top: 10px;
+      }
+      .signLine {
+        max-width: 100%;
+        width: 100%;
+      }
+      .logoImg {
+        padding: 2vh 0 0 2vh;
+        max-width: 40%;
+      }
+      @media only screen and (max-width: 640px) {
+        body {
+          width: auto !important;
+        }
+        body .main,
+        body[yahoo] .main {
+          width: 440px !important;
+        }
+        .logoImg {
+          max-width: 20%;
+        }
+      }
+      @media only screen and (max-width: 375px) {
+        .logoImg {
+          max-width: 40%;
+        }
+      }
+      @media only screen and (max-width: 768px) {
+        .logoImg {
+          max-width: 40%;
+        }
+      }
+      @media only screen and (max-width: 1425px) and (min-width: 769px) {
+        .logoImg {
+          max-width: 25%;
+        }
+      }
+      @media only screen and (max-width: 479px) {
+        body {
+          width: auto !important;
+        }
+        body .main,
+        body[yahoo] .main {
+          width: 100% !important;
+        }
+
+        .footerImg {
+          max-width: 103%;
+        }
+        .logoImg {
+          max-width: 40%;
+        }
+      }
+
+      .CTAButton {
+        align-self: center;
+        box-shadow: 0px 1px 0px 0px #000b10;
+        background-color: #f73068;
+        display: inline-block;
+        cursor: pointer;
+        color: white;
+        font-family: Arial;
+        font-size: 15px;
+        font-weight: bold;
+        padding: 6px 24px;
+        text-align: center;
+        text-decoration: none;
+        width: auto;
+        margin-bottom: 2%;
+      }
+      .CTAButton:hover {
+        color: white;
+        background-color: #3d28ff;
+      }
+      .CTAButton:active {
+        position: relative;
+        top: 1px;
+      }
+      .marked {
+        color: #f15f5e;
+      }
+      .bonus {
+        font-size: 20px;
+        color: #f15f5e;
+      }
+      @media screen and (max-width: 768px) {
+        .marked {
+          font-size: 28px;
+        }
+        .responsive-link {
+          margin-right: 10px;
+        }
+
+        .responsive-img {
+          max-width: 80px; /* adjust as needed */
+        }
+      }
+
+      @media screen and (max-width: 480px) {
+        .marked {
+          font-size: 28px;
+        }
+        .responsive-link {
+          margin-right: 5px;
+        }
+
+        .responsive-img {
+          max-width: 60px; /* adjust as needed */
+        }
+      }
+      /* Start here */
+      .responsive-link {
+        display: inline-block;
+        margin-right: 20px;
+        text-align: left;
+      }
+      .responsive-img {
+        width: 100%;
+        max-height: 50px;
+        vertical-align: middle;
+        max-width: 80px;
+        padding-top: 10px;
+      }
+      @media screen and (max-width: 768px) {
+        .responsive-link {
+          margin-right: 10px;
+        }
+
+        .responsive-img {
+          max-width: 150px; /* adjust as needed */
+        }
+      }
+
+      @media screen and (max-width: 480px) {
+        .responsive-link {
+          margin-right: 5px;
+        }
+
+        .responsive-img {
+          max-width: 120px; /* adjust as needed */
+        }
+      }
+      /* End here */
+    </style>
+  </head>
+  <body
+    yahoo="fix"
+    leftmargin="0"
+    topmargin="0"
+    marginwidth="0"
+    marginheight="0"
+  >
+    <center>
+      <div class="main-container">
+        <table
+          width="100%"
+          border="0"
+          align="center"
+          cellpadding="0"
+          cellspacing="0"
+          bgcolor="#ececec"
+          module="Menu"
+        >
+          <tbody>
+            <tr>
+              <td align="center" valign="top">
+                <table
+                  width="560"
+                  border="0"
+                  align="center"
+                  cellpadding="0"
+                  cellspacing="0"
+                  bgcolor="#ffffff"
+                  class="main"
+                  style="margin-bottom: -2%; border-radius: 5px 5px 0 0"
+                >
+                  <tbody></tbody>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" valign="top">
+                <table
+                  width="560"
+                  border="0"
+                  align="center"
+                  bgcolor="#000000"
+                  cellpadding="0"
+                  cellspacing="0"
+                  class="main"
+                  style="border-radius: 0 0 5px 5px"
+                >
+                  <tbody>
+                    <tr style="background-color: #000000">
+                      <td>
+                        <a href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*&gt;"
+                          ><img
+                            class="logoImg"
+                            src="https://scdn.ntgm.rocks/image/stakes/auto/auto/X7%20CASINO_FullColour.png"
+                        /></a>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <img
+                          src="https://scdn.ntgm.rocks/image/stakes/auto/auto/1header.png"
+                          alt="borderDesign"
+                          style="margin-bottom: -10px"
+                        />
+                        <a href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*&gt;"
+                          ><img
+                            class="bannerImg"
+                            src="https://kgc-igpcms-production.s3.eu-central-1.amazonaws.com/x7c/pages/202402_X7_Email%20Activation_8d856262bf.webp"
+                        /></a>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <table
+                          border="0"
+                          align="left"
+                          cellpadding="0"
+                          cellspacing="0"
+                          style="max-width: 90%; margin: 15px 0px 15px 15px"
+                        >
+                          <tbody>
+                            <tr>
+                              <td
+                                class="editor mce-content-body"
+                                id="mce_6"
+                                style="padding-left: 1vw"
+                              >
+                                <p
+                                  class="marked"
+                                  style="
+                                    font-family: Open sans;
+                                    font-size: 24px;
+                                    letter-spacing: 2px;
+                                    color: #ffffff;
+                                  "
+                                >
+                                  <strong>Hi *|PLAYER_FNAME|*,</strong>
+                                </p>
+                                <br />
+                                <p style="color: #ffffff">
+                                  Thank you for signing up to X7!
+                                </p>
+                                <br />
+                                <p style="color: #ffffff">
+                                  One last step before you get started. We just
+                                  need you to verify your email address by
+                                  clicking on the button below. This will help
+                                  us confirm your identity and safeguard your
+                                  account from unknown forces.
+                                </p>
+                                <br />
+                                <center>
+                                  <a
+                                    href="*|REGISTRATION_COMPLETEREGURL_TOKEN|*"
+                                    class="CTAButton"
+                                    style="color: white"
+                                    >Verify me</a
+                                  >
+                                </center>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        align="center"
+                        valign="center"
+                        style="background-color: #ececec"
+                      >
+                        <img
+                          style="max-width: 100%"
+                          class="footerImg"
+                          src="https://kgc-igpcms-production.s3.eu-central-1.amazonaws.com/x7c/pages/STK%20X1_Email%20Footer%20New_4e7483e790.webp"
+                        />
+                      </td>
+                    </tr>
+                    <!-- Start Here -->
+                    <tr style="background-color: #ececec; padding-top: 0px">
+                      <td
+                        style="
+                          font-size: 12px;
+                          padding: 0px 15px 0px 15px;
+                          text-align: center;
+                        "
+                      >
+                        <p style="color: #6c6c6c; padding-top: 5px">
+                          This website is licensed under Starscream Limited, a
+                          company incorporated under the laws of Saint Lucia
+                          with registration number 2023-00007 and registered
+                          address in Saint Lucia, Starscream Limited is licensed
+                          and regulated in virtue of a Client Provider
+                          Authorization numbered 00952 issued on July 2023 by
+                          the Kahnawake Gaming Commission. Gambling can be
+                          addictive, please
+                          <a href="https://x7casino.com/en/responsible-gaming"
+                            >Play Responsibly</a
+                          >. For help visit our Responsible Gambling page.
+                          Underage gambling is an offence.18+
+                        </p>
+                      </td>
+                    </tr>
+                    <tr style="background-color: #ececec">
+                      <td align="center" style="text-align: center">
+                        <a
+                          class="responsive-link"
+                          href="https://gamingcommission.ca/interactive-gaming/players/#plLE"
+                          target="_blank"
+                          ><img
+                            class="responsive-img pa"
+                            src="https://ci3.googleusercontent.com/meips/ADKq_NYQAwKHfUWEye_Xpa0vTPZcXtmLXqng1L9Or61Ap9K2BevsVZ2OP6ZbIUuIYooP1jz9eH_AORshL9p4FBAewfqNFwYLFgexrMKPXJV311mB81_JTRKzq86QL0LHXUOowICPmRx3E1t5s6j34sGFq3N124IHVgi-qpQ=s0-d-e1-ft#https://mcusercontent.com/67e6e0bc2e88f76ace004d9fb/images/2d796751-f544-2b77-a0cc-7e02ed731ae0.png"
+                        /></a>
+                        <a
+                          class="responsive-link"
+                          href="https://x7casino.com/en/responsible-gaming"
+                          target="_blank"
+                          ><img
+                            class="responsive-img legal-age"
+                            src="https://ci3.googleusercontent.com/meips/ADKq_NYEVifLvPQjGDjm1Zk5S491T16o4hJTohm_1BaitmXTHf-x-tqzKq8xse_1393ooYIhFUiZCGunPOQ8bRwzXt3PRxwNIQ2rmR928htZTD3j0KbN8fyjTT1DIWB6EP5dMRuCXnFsnlJO11u2twTrWpnoNVa_MjXY7DE=s0-d-e1-ft#https://mcusercontent.com/67e6e0bc2e88f76ace004d9fb/images/2000e830-4711-07b6-92a6-904fcbb85006.png"
+                        /></a>
+                        <a
+                          class="responsive-link"
+                          href="https://gamingcommission.ca/interactive-gaming/players/#plLE"
+                          target="_blank"
+                          ><img
+                            class="responsive-img kgc"
+                            src="https://userimg-assets.customeriomail.com/images/client-env-110039/editor_images/Kahnawake_orig%20color-01HPKA6D9EF83NMEEN6D1CC3AJ.png"
+                        /></a>
+                        <p
+                          style="
+                            color: #6c6c6c;
+                            font-size: 12px;
+                            padding-top: 1em;
+                          "
+                        >
+                          ©2024 X7Casino, All Rights Reserved.
+                        </p>
+                      </td>
+                    </tr>
+                    <!-- End Here -->
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </center>
+  </body>
+</html>
