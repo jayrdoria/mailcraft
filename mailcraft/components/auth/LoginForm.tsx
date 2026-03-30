@@ -67,7 +67,7 @@ export default function LoginForm() {
         disabled={pending}
         className="w-full py-2 px-4 text-sm font-medium rounded-md
                    bg-primary text-primary-foreground
-                   hover:opacity-90 transition-opacity
+                   hover:opacity-90 transition-opacity cursor-pointer
                    disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {pending ? 'Signing in…' : 'Sign in'}

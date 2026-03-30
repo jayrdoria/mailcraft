@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { logoutAction } from '@/lib/actions/auth'
+import Link from 'next/link'
+import { FileText, Plus } from 'lucide-react'
 
 export const metadata = {
   title: 'Dashboard — MailCraft',
@@ -11,48 +12,31 @@ export default async function DashboardPage() {
   if (!session) redirect('/login')
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">MailCraft</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Welcome back,{' '}
-              <span className="font-medium text-foreground">{session.user.name}</span>
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Role: {session.user.role}
-              {session.user.department
-                ? ` · ${session.user.department.toUpperCase()}`
-                : ''}
-            </p>
-          </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm rounded-md border border-input
-                         hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
+    <div className="p-8">
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold">My Templates</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Your saved email templates
+        </p>
+      </div>
 
-        <div className="rounded-xl border bg-card p-6">
-          <p className="text-sm text-muted-foreground">
-            ✓ Phase 1 — Auth + DB foundation working.
-            <br />
-            Template editor and full UI coming in Phase 2+.
-          </p>
+      {/* Empty state — saved templates list implemented in Phase 4 */}
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
+        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-3">
+          <FileText className="w-5 h-5 text-muted-foreground" />
         </div>
-
-        {session.user.role === 'ADMIN' && (
-          <div className="mt-4 rounded-xl border border-dashed p-4">
-            <p className="text-xs text-muted-foreground">
-              Admin panel — coming in Phase 5
-            </p>
-          </div>
-        )}
+        <p className="text-sm font-medium">No templates yet</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Browse master templates to create your first one
+        </p>
+        <Link
+          href="/templates"
+          className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium
+                     rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Browse Templates
+        </Link>
       </div>
     </div>
   )
