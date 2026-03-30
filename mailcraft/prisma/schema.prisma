@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  DEPARTMENT
+}
+
+enum Brand {
+  STAKES
+  X7
+}
+
+enum Language {
+  EN
+  FR
+  DE
+  IT
+  ES
+}
+
+enum ActivityAction {
+  TEMPLATE_CLONED
+  TEMPLATE_SAVED
+  TEMPLATE_DELETED
+  HTML_COPIED
+  HTML_DOWNLOADED
+  SECTION_DELETED
+  ACCOUNT_CREATED
+  ACCOUNT_DEACTIVATED
+}
+
+// ─────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  name         String
+  passwordHash String
+  role         Role    @default(DEPARTMENT)
+  department   String?
+  isActive     Boolean @default(true)
+  canAccessEmails Boolean @default(true)
+
+  savedTemplates        SavedTemplate[]
+  templatesSharedByMe   SharedTemplate[] @relation("SharedBy")
+  templatesSharedWithMe SharedTemplate[] @relation("SharedWith")
+  activityLogs          ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// MASTER TEMPLATE
+// ─────────────────────────────────────────────
+
+model MasterTemplate {
+  id           String  @id @default(cuid())
+  name         String
+  slug         String  @unique
+  brand        Brand
+  description  String?
+
+  // Base directory path on VPS filesystem
+  // Per-language files: {baseFilePath}/{lang}.html
+  // e.g. /var/www/mailcraft/master-templates/stakes/email-verification/en.html
+  baseFilePath String
+
+  isActive Boolean @default(true)
+
+  // JSON: TemplateFieldConfig[] — editable fields shown in editor
+  editableFields Json
+
+  // JSON: LockedFieldConfig[] — never shown to users, injected at render time
+  lockedFields Json @default("[]")
+
+  savedTemplates SavedTemplate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("master_templates")
+}
+
+// ─────────────────────────────────────────────
+// SAVED TEMPLATE
+// ─────────────────────────────────────────────
+
+model SavedTemplate {
+  id               String @id @default(cuid())
+  name             String
+  userId           String
+  masterTemplateId String
+
+  // JSON: MultiLanguageFieldValues — { en: { BANNER_URL: "...", ... }, fr: {...}, ... }
+  fieldValues Json
+
+  // JSON: SavedSectionConfig[] — section on/off state, same for all languages
+  sectionConfig Json
+
+  // Base directory for rendered output files on VPS
+  renderedBasePath String?
+
+  sharedWith SharedTemplate[]
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  masterTemplate MasterTemplate @relation(fields: [masterTemplateId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([masterTemplateId])
+  @@map("saved_templates")
+}
+
+// ─────────────────────────────────────────────
+// SHARED TEMPLATE
+// ─────────────────────────────────────────────
+
+model SharedTemplate {
+  id              String @id @default(cuid())
+  savedTemplateId String
+  sharedById      String
+  sharedWithId    String
+
+  savedTemplate SavedTemplate @relation(fields: [savedTemplateId], references: [id], onDelete: Cascade)
+  sharedBy      User          @relation("SharedBy", fields: [sharedById], references: [id])
+  sharedWith    User          @relation("SharedWith", fields: [sharedWithId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([savedTemplateId, sharedWithId])
+  @@index([sharedWithId])
+  @@index([sharedById])
+  @@map("shared_templates")
+}
+
+// ─────────────────────────────────────────────
+// ACTIVITY LOG
+// ─────────────────────────────────────────────
+
+model ActivityLog {
+  id     String         @id @default(cuid())
+  action ActivityAction
+  userId String
+  userName String
+
+  savedTemplateId    String?
+  savedTemplateName  String?
+  masterTemplateName String?
+  sectionName        String?
+  htmlType           String?
+  targetAccountName  String?
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("activity_logs")
+}
