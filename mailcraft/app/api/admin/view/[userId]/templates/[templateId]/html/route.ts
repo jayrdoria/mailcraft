@@ -1,8 +1,6 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiSuccess, apiHandler, requireAdmin } from '@/lib/api'
 import { renderTemplate, buildSectionTransformer } from '@/lib/services/renderService'
-import { cleanHtml } from '@/lib/services/sectionService'
 import { prisma } from '@/lib/prisma'
-import * as activityService from '@/lib/services/activityService'
 import type {
   Language,
   MultiLanguageFieldValues,
@@ -12,34 +10,24 @@ import type {
 } from '@/lib/types/template'
 
 interface RouteContext {
-  params: Promise<{ id: string }>
+  params: Promise<{ userId: string; templateId: string }>
 }
 
 const VALID_LANGS: Language[] = ['en', 'fr', 'de', 'it', 'es']
 
-// GET /api/templates/saved/:id/clean?lang=en — render clean HTML (no section markers, disabled removed)
+// GET /api/admin/view/:userId/templates/:templateId/html?lang=en — admin view of user's template HTML
 export const GET = apiHandler(async (req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const session = await requireAdmin()
+  if (!session) return apiError('Forbidden', 403)
 
-  const { id } = await (ctx as RouteContext).params
+  const { userId, templateId } = await (ctx as RouteContext).params
 
   const url = new URL(req.url)
   const rawLang = url.searchParams.get('lang') ?? 'en'
   const lang = VALID_LANGS.includes(rawLang as Language) ? (rawLang as Language) : 'en'
 
-  const isAdmin = session.user.role === 'ADMIN'
-
   const saved = await prisma.savedTemplate.findFirst({
-    where: isAdmin
-      ? { id }
-      : {
-          id,
-          OR: [
-            { userId: session.user.id },
-            { sharedWith: { some: { sharedWithId: session.user.id } } },
-          ],
-        },
+    where: { id: templateId, userId },
     include: { masterTemplate: true },
   })
   if (!saved) return apiError('Template not found', 404)
@@ -61,16 +49,7 @@ export const GET = apiHandler(async (req, ctx) => {
   }
 
   const transformer = buildSectionTransformer(saved.sectionConfig as unknown as SavedSectionConfig[])
-  html = cleanHtml(transformer(html))
+  html = transformer(html)
 
-  await activityService.log({
-    action: 'HTML_COPIED',
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? 'Unknown',
-    savedTemplateId: saved.id,
-    savedTemplateName: saved.name,
-    htmlType: 'clean',
-  })
-
-  return apiSuccess({ html, lang })
+  return apiSuccess({ html, lang, templateName: saved.name })
 })

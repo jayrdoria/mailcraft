@@ -65,9 +65,10 @@ export type MultiLanguageFieldValues = Record<Language, TemplateFieldValues>
 // ─────────────────────────────────────────────
 
 export interface SavedSectionConfig {
-  name: string     // e.g. "THUMBNAILS"
-  label: string    // e.g. "Thumbnails"
+  name: string       // e.g. "THUMBNAILS"
+  label: string      // e.g. "Thumbnails"
   isActive: boolean
+  isDeleted?: boolean // true = permanently removed from this saved template
 }
 
 // ─────────────────────────────────────────────

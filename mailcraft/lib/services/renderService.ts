@@ -3,9 +3,32 @@ import type {
   LockedFieldConfig,
   MultiLanguageFieldValues,
   Language,
+  SavedSectionConfig,
 } from '@/lib/types/template'
 import { readTemplateHtml, writeTemplateHtml } from '@/lib/services/fileService'
+import { disableSection, deleteSection } from '@/lib/services/sectionService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
+
+// ─────────────────────────────────────────────
+// Section config transformer
+// Applies sectionConfig (disable/delete) to rendered HTML
+// ─────────────────────────────────────────────
+
+export function buildSectionTransformer(
+  sectionConfig: SavedSectionConfig[]
+): (html: string) => string {
+  return (html: string): string => {
+    let result = html
+    for (const section of sectionConfig) {
+      if (section.isDeleted) {
+        result = deleteSection(result, section.name)
+      } else if (!section.isActive) {
+        result = disableSection(result, section.name)
+      }
+    }
+    return result
+  }
+}
 
 // ─────────────────────────────────────────────
 // Token injection
