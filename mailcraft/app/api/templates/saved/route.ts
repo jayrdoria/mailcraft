@@ -21,7 +21,7 @@ export const GET = apiHandler(async () => {
     prisma.savedTemplate.findMany({
       where: { userId: session.user.id },
       include: {
-        masterTemplate: { select: { id: true, name: true, brand: true, slug: true } },
+        masterTemplate: { select: { id: true, name: true, brand: true, slug: true, editableFields: true } },
       },
       orderBy: { updatedAt: 'desc' },
     }),
@@ -30,7 +30,7 @@ export const GET = apiHandler(async () => {
       include: {
         savedTemplate: {
           include: {
-            masterTemplate: { select: { id: true, name: true, brand: true, slug: true } },
+            masterTemplate: { select: { id: true, name: true, brand: true, slug: true, editableFields: true } },
             user: { select: { id: true, name: true, department: true } },
           },
         },
@@ -40,7 +40,38 @@ export const GET = apiHandler(async () => {
     }),
   ])
 
-  return apiSuccess({ own, shared })
+  function extractPreview(
+    fieldValues: Record<string, Record<string, string>> | null,
+    editableFields: unknown
+  ): string | null {
+    const fv = fieldValues as Record<string, Record<string, string>> | null
+    const saved = fv?.['en']?.['BANNER_URL']
+    if (saved) return saved
+    const fields = editableFields as Array<{ key: string; defaultValues?: Record<string, string>; defaultValue?: string }> | null
+    const bannerField = fields?.find((f) => f.key === 'BANNER_URL')
+    return bannerField?.defaultValues?.['en'] ?? bannerField?.defaultValue ?? null
+  }
+
+  const ownWithPreview = own.map((t) => ({
+    ...t,
+    previewImageUrl: extractPreview(
+      t.fieldValues as Record<string, Record<string, string>>,
+      t.masterTemplate.editableFields
+    ),
+  }))
+
+  const sharedWithPreview = shared.map((s) => ({
+    ...s,
+    savedTemplate: {
+      ...s.savedTemplate,
+      previewImageUrl: extractPreview(
+        s.savedTemplate.fieldValues as Record<string, Record<string, string>>,
+        s.savedTemplate.masterTemplate.editableFields
+      ),
+    },
+  }))
+
+  return apiSuccess({ own: ownWithPreview, shared: sharedWithPreview })
 })
 
 // POST /api/templates/saved — clone a master template into a new saved template

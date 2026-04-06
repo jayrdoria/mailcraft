@@ -1,4 +1,4 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiHandler, requireAuth } from '@/lib/api'
 import { renderTemplate, buildSectionTransformer } from '@/lib/services/renderService'
 import { cleanHtml } from '@/lib/services/sectionService'
 import { prisma } from '@/lib/prisma'
@@ -72,5 +72,8 @@ export const GET = apiHandler(async (req, ctx) => {
     htmlType: 'clean',
   })
 
-  return apiSuccess({ html, lang })
+  return new Response(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  })
 })

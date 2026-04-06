@@ -34,6 +34,7 @@ interface NavItem {
 const mainNav: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Browse Templates', href: '/templates', icon: Mail },
+  { label: 'My Activity', href: '/activity', icon: Activity },
 ]
 
 const comingSoonNav: NavItem[] = [

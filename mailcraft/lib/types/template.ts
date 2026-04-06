@@ -15,6 +15,7 @@ export interface TemplateFieldConfig {
   placeholder?: string
   defaultRequired: boolean
   defaultValue?: string
+  defaultValues?: Partial<Record<Language, string>>
   group?: string
 }
 
