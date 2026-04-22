@@ -12,9 +12,6 @@ node_modules/
 .next/
 out/
 
-# Local dev template data
-mailcraft/data/
-
 # Production
 build/
 dist/
