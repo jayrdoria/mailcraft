@@ -4,16 +4,28 @@ import { z } from 'zod'
 // Shared primitives
 // ─────────────────────────────────────────────
 
-export const languageSchema = z.enum(['en', 'fr', 'de', 'it', 'es'])
+export const languageSchema = z.enum(['en', 'fr', 'frca', 'de', 'it', 'es'])
+
+export const bodyParagraphSchema = z.object({
+  id:   z.string().min(1),
+  html: z.string(),
+})
+
+export const fieldValueSchema = z.union([
+  z.string(),
+  z.array(bodyParagraphSchema),
+])
 
 export const templateFieldConfigSchema = z.object({
-  key:             z.string().min(1),
-  label:           z.string().min(1),
-  type:            z.enum(['url', 'text', 'richtext', 'link']),
-  placeholder:     z.string().optional(),
-  defaultRequired: z.boolean(),
-  defaultValue:    z.string().optional(),
-  group:           z.string().optional(),
+  key:               z.string().min(1),
+  label:             z.string().min(1),
+  type:              z.enum(['url', 'text', 'richtext', 'link', 'paragraphs']),
+  placeholder:       z.string().optional(),
+  defaultRequired:   z.boolean(),
+  defaultValue:      z.string().optional(),
+  defaultValues:     z.record(languageSchema, z.string()).optional(),
+  defaultParagraphs: z.array(bodyParagraphSchema).optional(),
+  group:             z.string().optional(),
 })
 
 export const lockedFieldConfigSchema = z.object({
@@ -41,6 +53,7 @@ export const createMasterTemplateSchema = z.object({
   description:    z.string().optional(),
   editableFields: z.array(templateFieldConfigSchema),
   lockedFields:   z.array(lockedFieldConfigSchema),
+  languages:      z.array(languageSchema).optional(),
 })
 
 export const updateMasterTemplateSchema = z.object({
@@ -48,6 +61,7 @@ export const updateMasterTemplateSchema = z.object({
   description:    z.string().optional(),
   editableFields: z.array(templateFieldConfigSchema).optional(),
   lockedFields:   z.array(lockedFieldConfigSchema).optional(),
+  languages:      z.array(languageSchema).optional(),
 })
 
 // ─────────────────────────────────────────────
@@ -58,16 +72,16 @@ export const createSavedTemplateSchema = z.object({
   name:             z.string().min(1).max(150),
   masterTemplateId: z.string().cuid(),
   fieldValues:      z
-    .record(languageSchema, z.record(z.string(), z.string()))
+    .record(languageSchema, z.record(z.string(), fieldValueSchema))
     .optional()
-    .default({ en: {}, fr: {}, de: {}, it: {}, es: {} }),
+    .default({ en: {}, fr: {}, frca: {}, de: {}, it: {}, es: {} }),
   sectionConfig: z.array(savedSectionConfigSchema).optional().default([]),
 })
 
 export const updateSavedTemplateSchema = z.object({
   name:          z.string().min(1).max(150).optional(),
   fieldValues:   z
-    .record(languageSchema, z.record(z.string(), z.string()))
+    .record(languageSchema, z.record(z.string(), fieldValueSchema))
     .optional(),
   sectionConfig: z.array(savedSectionConfigSchema).optional(),
 })

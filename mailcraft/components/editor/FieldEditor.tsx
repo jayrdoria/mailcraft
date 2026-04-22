@@ -5,7 +5,7 @@ import { Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
 import { clientRender } from '@/lib/clientRender'
-import type { TemplateFieldConfig, Language, SavedSectionConfig } from '@/lib/types/template'
+import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue } from '@/lib/types/template'
 import { LANGUAGE_LABELS, LANGUAGES } from '@/lib/types/template'
 
 interface FieldEditorProps {
@@ -33,6 +33,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const setFieldValue = useEditorStore((s) => s.setFieldValue)
   const setRenderedHtml = useEditorStore((s) => s.setRenderedHtml)
   const requiredFields = useEditorStore((s) => s.requiredFields)
+  const supportedLanguages = useEditorStore((s) => s.supportedLanguages)
 
   // Build current section config from active sections
   const currentSectionConfig: SavedSectionConfig[] = sectionConfig.map((s) => ({
@@ -42,7 +43,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
 
   // Debounced preview update
   const updatePreview = useDebounce(
-    (html: string, values: Record<string, string>, sc: SavedSectionConfig[]) => {
+    (html: string, values: Record<string, FieldValue>, sc: SavedSectionConfig[]) => {
       const rendered = clientRender(html, values, sc)
       setRenderedHtml(rendered)
     },
@@ -71,12 +72,12 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
     <div className="flex flex-col h-full overflow-hidden">
       {/* Language tabs */}
       <div className="flex gap-0 border-b shrink-0 overflow-x-auto">
-        {LANGUAGES.map((lang) => (
+        {supportedLanguages.map((lang) => (
           <button
             key={lang}
             onClick={() => setActiveLanguage(lang)}
             className={cn(
-              'px-3 py-2 text-xs font-medium shrink-0 border-b-2 transition-colors cursor-pointer',
+              'px-3 py-2 text-xs font-medium shrink-0 border-b-2 transition-colors cursor-pointer uppercase',
               activeLanguage === lang
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -120,8 +121,25 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
 
               <div className="space-y-3">
                 {fields.map((field) => {
-                  const value = currentLangValues[field.key] ?? field.defaultValue ?? ''
                   const isRequired = requiredFields.includes(field.key) || field.defaultRequired
+
+                  // Paragraphs fields are handled by ParagraphEditor (Phase 4)
+                  if (field.type === 'paragraphs') {
+                    return (
+                      <div key={field.key}>
+                        <label className="flex items-center gap-1 text-xs font-medium mb-1">
+                          {field.label}
+                          {isRequired && <span className="text-destructive">*</span>}
+                        </label>
+                        <p className="text-xs text-muted-foreground px-3 py-2 rounded-md border bg-muted/40">
+                          Paragraph editor — coming soon
+                        </p>
+                      </div>
+                    )
+                  }
+
+                  const rawValue = currentLangValues[field.key]
+                  const value = typeof rawValue === 'string' ? rawValue : (field.defaultValue ?? '')
 
                   return (
                     <div key={field.key}>
@@ -182,13 +200,15 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
 export function LanguageSelector({
   value,
   onChange,
+  languages = LANGUAGES,
 }: {
   value: Language
   onChange: (lang: Language) => void
+  languages?: Language[]
 }) {
   return (
     <div className="flex gap-1">
-      {LANGUAGES.map((lang) => (
+      {languages.map((lang) => (
         <button
           key={lang}
           onClick={() => onChange(lang)}

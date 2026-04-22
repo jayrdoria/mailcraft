@@ -28,7 +28,7 @@ interface MasterTemplate {
 }
 
 function getMasterPreviewImage(m: MasterTemplate): string | null {
-  const f = m.editableFields?.find((f) => f.key === 'BANNER_URL')
+  const f = m.editableFields?.find((f) => f.key === 'BANNER_IMG')
   return f?.defaultValues?.['en'] ?? f?.defaultValue ?? null
 }
 

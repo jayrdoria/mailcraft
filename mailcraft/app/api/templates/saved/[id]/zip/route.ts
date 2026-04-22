@@ -9,6 +9,7 @@ import type {
   SavedSectionConfig,
   LockedFieldConfig,
   TemplateFieldConfig,
+  Language,
 } from '@/lib/types/template'
 import JSZip from 'jszip'
 
@@ -39,6 +40,9 @@ export const GET = apiHandler(async (_req, ctx) => {
   if (!saved) return apiError('Template not found', 404)
 
   const master = saved.masterTemplate
+  const masterRaw = master as unknown as { languages?: unknown }
+  const masterLanguages = (masterRaw.languages as Language[]) ?? []
+  const activeLangs: Language[] = masterLanguages.length > 0 ? masterLanguages : LANGUAGES
   const transformer = buildSectionTransformer(saved.sectionConfig as unknown as SavedSectionConfig[])
   const zip = new JSZip()
 
@@ -51,7 +55,7 @@ export const GET = apiHandler(async (_req, ctx) => {
   const folder = zip.folder(folderName)!
 
   const results = await Promise.allSettled(
-    LANGUAGES.map(async (lang) => {
+    activeLangs.map(async (lang) => {
       const html = await renderTemplate({
         masterTemplateId: master.id,
         baseFilePath: master.baseFilePath,
@@ -65,7 +69,7 @@ export const GET = apiHandler(async (_req, ctx) => {
   )
 
   const failed = results.filter((r) => r.status === 'rejected')
-  if (failed.length === LANGUAGES.length) {
+  if (failed.length === activeLangs.length) {
     return apiError('No master HTML files found — upload template files first', 404)
   }
 

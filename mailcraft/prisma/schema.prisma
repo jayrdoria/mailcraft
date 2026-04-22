@@ -24,6 +24,7 @@ enum Brand {
 enum Language {
   EN
   FR
+  FRCA
   DE
   IT
   ES
@@ -88,6 +89,10 @@ model MasterTemplate {
 
   // JSON: LockedFieldConfig[] — never shown to users, injected at render time
   lockedFields Json @default("[]")
+
+  // JSON: Language[] — which language HTML files exist for this template
+  // Controls language tabs in editor and which files to render/export
+  languages Json @default("[]")
 
   savedTemplates SavedTemplate[]
 

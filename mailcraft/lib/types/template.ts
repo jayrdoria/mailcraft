@@ -1,8 +1,20 @@
 // ─────────────────────────────────────────────
+// BODY PARAGRAPHS
+// ─────────────────────────────────────────────
+
+export interface BodyParagraph {
+  id: string
+  html: string // may contain <strong> tags for bold
+}
+
+// ─────────────────────────────────────────────
 // FIELD TYPES
 // ─────────────────────────────────────────────
 
-export type TemplateFieldType = 'url' | 'text' | 'richtext' | 'link'
+export type TemplateFieldType = 'url' | 'text' | 'richtext' | 'link' | 'paragraphs'
+
+// Value stored per field — string for all types except 'paragraphs'
+export type FieldValue = string | BodyParagraph[]
 
 // ─────────────────────────────────────────────
 // EDITABLE FIELDS — shown in editor to users
@@ -15,7 +27,10 @@ export interface TemplateFieldConfig {
   placeholder?: string
   defaultRequired: boolean
   defaultValue?: string
+  // Per-language overrides for string fields (url, text, richtext, link)
   defaultValues?: Partial<Record<Language, string>>
+  // Initial paragraphs for 'paragraphs' type fields
+  defaultParagraphs?: BodyParagraph[]
   group?: string
 }
 
@@ -39,15 +54,16 @@ export interface LockedFieldConfig {
 // LANGUAGES
 // ─────────────────────────────────────────────
 
-export type Language = 'en' | 'fr' | 'de' | 'it' | 'es'
-export const LANGUAGES: Language[] = ['en', 'fr', 'de', 'it', 'es']
+export type Language = 'en' | 'fr' | 'frca' | 'de' | 'it' | 'es'
+export const LANGUAGES: Language[] = ['en', 'fr', 'frca', 'de', 'it', 'es']
 
 export const LANGUAGE_LABELS: Record<Language, string> = {
-  en: 'English',
-  fr: 'French',
-  de: 'German',
-  it: 'Italian',
-  es: 'Spanish',
+  en:   'EN',
+  fr:   'FR',
+  frca: 'FRCA',
+  de:   'DE',
+  it:   'IT',
+  es:   'ES',
 }
 
 // ─────────────────────────────────────────────
@@ -55,7 +71,7 @@ export const LANGUAGE_LABELS: Record<Language, string> = {
 // ─────────────────────────────────────────────
 
 // Values for a single language
-export type TemplateFieldValues = Record<string, string>
+export type TemplateFieldValues = Record<string, FieldValue>
 
 // All languages combined
 export type MultiLanguageFieldValues = Record<Language, TemplateFieldValues>
@@ -91,5 +107,5 @@ export type BrandSlug = 'STAKES' | 'X7'
 
 export const BRAND_LABELS: Record<BrandSlug, string> = {
   STAKES: 'Stakes',
-  X7: 'X7 Casino',
+  X7:     'X7 Casino',
 }

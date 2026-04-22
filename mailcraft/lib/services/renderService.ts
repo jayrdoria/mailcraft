@@ -4,7 +4,9 @@ import type {
   MultiLanguageFieldValues,
   Language,
   SavedSectionConfig,
+  FieldValue,
 } from '@/lib/types/template'
+import { LANGUAGES } from '@/lib/types/template'
 import { readTemplateHtml, writeTemplateHtml } from '@/lib/services/fileService'
 import { disableSection, deleteSection } from '@/lib/services/sectionService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
@@ -36,10 +38,10 @@ export function buildSectionTransformer(
 // CIO merge tags (*|...|*) are passed through as literal strings
 // ─────────────────────────────────────────────
 
-function injectTokens(html: string, tokens: Record<string, string>): string {
+function injectTokens(html: string, tokens: Record<string, FieldValue>): string {
   let result = html
   for (const [key, value] of Object.entries(tokens)) {
-    // Escape special regex characters in key
+    if (Array.isArray(value)) continue // BodyParagraph[] — rendered in Phase 3
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     result = result.replace(new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g'), value)
   }
@@ -71,11 +73,11 @@ async function getMasterHtml(
 // ─────────────────────────────────────────────
 
 export async function invalidateMasterTemplateCache(
-  masterTemplateId: string
+  masterTemplateId: string,
+  languages: Language[] = LANGUAGES
 ): Promise<void> {
-  const langs: Language[] = ['en', 'fr', 'de', 'it', 'es']
   await Promise.all(
-    langs.map((lang) =>
+    languages.map((lang) =>
       redis.del(CacheKeys.masterTemplateHtml(masterTemplateId, lang))
     )
   )

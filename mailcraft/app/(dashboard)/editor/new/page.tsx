@@ -9,6 +9,7 @@ import type {
   LockedFieldConfig,
   MultiLanguageFieldValues,
   SavedSectionConfig,
+  Language,
 } from '@/lib/types/template'
 import { LANGUAGES } from '@/lib/types/template'
 
@@ -42,15 +43,21 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
   const editableFields = masterTemplate.editableFields as unknown as TemplateFieldConfig[]
   const lockedFields = masterTemplate.lockedFields as unknown as LockedFieldConfig[]
 
+  const masterRaw = masterTemplate as unknown as { languages?: unknown }
+  const masterLanguages = (masterRaw.languages as Language[]) ?? []
+  const supportedLanguages: Language[] = masterLanguages.length > 0 ? masterLanguages : LANGUAGES
+
   // Default field values from field definitions — supports per-language overrides via defaultValues
-  const defaultFieldValues: MultiLanguageFieldValues = { en: {}, fr: {}, de: {}, it: {}, es: {} }
-  for (const lang of LANGUAGES) {
+  const defaultFieldValues: MultiLanguageFieldValues = { en: {}, fr: {}, frca: {}, de: {}, it: {}, es: {} }
+  for (const lang of supportedLanguages) {
     for (const field of editableFields) {
-      const langSpecific = field.defaultValues?.[lang]
-      const fallback = field.defaultValue
-      const value = langSpecific ?? fallback
-      if (value !== undefined) {
-        defaultFieldValues[lang][field.key] = value
+      if (field.type === 'paragraphs') {
+        defaultFieldValues[lang][field.key] = field.defaultParagraphs ?? []
+      } else {
+        const value = field.defaultValues?.[lang] ?? field.defaultValue
+        if (value !== undefined) {
+          defaultFieldValues[lang][field.key] = value
+        }
       }
     }
   }
@@ -87,6 +94,7 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
       sectionConfig={defaultSectionConfig}
       masterPreviewHtml={masterPreviewHtml}
       isOwner={true}
+      supportedLanguages={supportedLanguages}
     />
   )
 }

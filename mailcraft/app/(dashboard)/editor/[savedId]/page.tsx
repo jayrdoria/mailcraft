@@ -9,7 +9,9 @@ import type {
   LockedFieldConfig,
   MultiLanguageFieldValues,
   SavedSectionConfig,
+  Language,
 } from '@/lib/types/template'
+import { LANGUAGES } from '@/lib/types/template'
 
 interface EditorPageProps {
   params: Promise<{ savedId: string }>
@@ -60,6 +62,9 @@ export default async function EditorPage({ params }: EditorPageProps) {
   const lockedFields = saved.masterTemplate.lockedFields as unknown as LockedFieldConfig[]
   const fieldValues = saved.fieldValues as unknown as MultiLanguageFieldValues
   const sectionConfig = saved.sectionConfig as unknown as SavedSectionConfig[]
+  const masterRaw = saved.masterTemplate as unknown as { languages?: unknown }
+  const masterLanguages = (masterRaw.languages as Language[]) ?? []
+  const supportedLanguages: Language[] = masterLanguages.length > 0 ? masterLanguages : LANGUAGES
 
   // Fetch master preview HTML
   let masterPreviewHtml = ''
@@ -89,6 +94,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
       sectionConfig={sectionConfig}
       masterPreviewHtml={masterPreviewHtml}
       isOwner={isOwner}
+      supportedLanguages={supportedLanguages}
     />
   )
 }

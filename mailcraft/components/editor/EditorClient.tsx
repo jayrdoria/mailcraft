@@ -18,7 +18,8 @@ import FieldEditor from './FieldEditor'
 import LivePreview from './LivePreview'
 import ExportButtons from './ExportButtons'
 import TemplateActivityLog from './TemplateActivityLog'
-import type { TemplateFieldConfig, SavedSectionConfig, MultiLanguageFieldValues } from '@/lib/types/template'
+import type { TemplateFieldConfig, SavedSectionConfig, MultiLanguageFieldValues, Language } from '@/lib/types/template'
+import { LANGUAGES } from '@/lib/types/template'
 import type { SetupConfig } from '@/lib/stores/editorStore'
 
 interface MasterTemplate {
@@ -36,6 +37,7 @@ interface EditorClientProps {
   sectionConfig: SavedSectionConfig[]
   masterPreviewHtml: string
   isOwner: boolean
+  supportedLanguages?: Language[]
 }
 
 export default function EditorClient({
@@ -46,6 +48,7 @@ export default function EditorClient({
   sectionConfig,
   masterPreviewHtml,
   isOwner,
+  supportedLanguages = LANGUAGES,
 }: EditorClientProps) {
   const router = useRouter()
   const qc = useQueryClient()
@@ -85,6 +88,7 @@ export default function EditorClient({
       fieldValues,
       sectionConfig,
       masterPreviewHtml,
+      supportedLanguages,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -190,7 +194,8 @@ export default function EditorClient({
     // Validate required fields
     const missingRequired = useEditorStore.getState().requiredFields.filter((key) => {
       const val = storeFieldValues.en[key]
-      return !val || val.trim() === ''
+      if (Array.isArray(val)) return val.length === 0
+      return !val || (val as string).trim() === ''
     })
     if (missingRequired.length > 0) {
       toast.error('Please fill in all required fields')

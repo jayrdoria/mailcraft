@@ -1,17 +1,13 @@
-/**
- * Client-side HTML rendering utilities.
- * Pure functions — no server deps.
- */
-
-import type { SavedSectionConfig } from '@/lib/types/template'
+import type { SavedSectionConfig, FieldValue } from '@/lib/types/template'
 
 // ─────────────────────────────────────────────
 // Token injection
 // ─────────────────────────────────────────────
 
-export function injectTokens(html: string, tokens: Record<string, string>): string {
+export function injectTokens(html: string, tokens: Record<string, FieldValue>): string {
   let result = html
   for (const [key, value] of Object.entries(tokens)) {
+    if (Array.isArray(value)) continue // BodyParagraph[] — rendered in Phase 3
     const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     result = result.replace(new RegExp(`\\{\\{${escaped}\\}\\}`, 'g'), value)
   }
@@ -115,7 +111,7 @@ export function parseSectionNames(html: string): { name: string; label: string }
 
 export function clientRender(
   masterPreviewHtml: string,
-  fieldValues: Record<string, string>,
+  fieldValues: Record<string, FieldValue>,
   sectionConfig: SavedSectionConfig[]
 ): string {
   let html = applySectionConfig(masterPreviewHtml, sectionConfig)

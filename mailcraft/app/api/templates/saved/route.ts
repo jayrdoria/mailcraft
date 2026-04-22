@@ -10,6 +10,7 @@ import type {
   SavedSectionConfig,
   LockedFieldConfig,
   TemplateFieldConfig,
+  Language,
 } from '@/lib/types/template'
 
 // GET /api/templates/saved — list current user's saved templates + shared with me
@@ -41,14 +42,14 @@ export const GET = apiHandler(async () => {
   ])
 
   function extractPreview(
-    fieldValues: Record<string, Record<string, string>> | null,
+    fieldValues: Record<string, Record<string, unknown>> | null,
     editableFields: unknown
   ): string | null {
-    const fv = fieldValues as Record<string, Record<string, string>> | null
-    const saved = fv?.['en']?.['BANNER_URL']
-    if (saved) return saved
+    const fv = fieldValues as Record<string, Record<string, unknown>> | null
+    const saved = fv?.['en']?.['BANNER_IMG']
+    if (typeof saved === 'string') return saved
     const fields = editableFields as Array<{ key: string; defaultValues?: Record<string, string>; defaultValue?: string }> | null
-    const bannerField = fields?.find((f) => f.key === 'BANNER_URL')
+    const bannerField = fields?.find((f) => f.key === 'BANNER_IMG')
     return bannerField?.defaultValues?.['en'] ?? bannerField?.defaultValue ?? null
   }
 
@@ -90,13 +91,20 @@ export const POST = apiHandler(async (req) => {
 
   // Build initial fieldValues: use provided values or fall back to field defaults
   const editableFields = master.editableFields as unknown as TemplateFieldConfig[]
-  const initialFieldValues: MultiLanguageFieldValues = { en: {}, fr: {}, de: {}, it: {}, es: {} }
+  const masterRaw = master as unknown as { languages?: unknown }
+  const masterLanguages = (masterRaw.languages as Language[]) ?? []
+  const activeLangs: Language[] = masterLanguages.length > 0 ? masterLanguages : LANGUAGES
+  const initialFieldValues: MultiLanguageFieldValues = { en: {}, fr: {}, frca: {}, de: {}, it: {}, es: {} }
 
-  for (const lang of LANGUAGES) {
+  for (const lang of activeLangs) {
     for (const field of editableFields) {
       const provided = fieldValues[lang]?.[field.key]
       if (provided !== undefined) {
         initialFieldValues[lang][field.key] = provided
+      } else if (field.type === 'paragraphs') {
+        initialFieldValues[lang][field.key] = field.defaultParagraphs ?? []
+      } else if (field.defaultValues?.[lang] !== undefined) {
+        initialFieldValues[lang][field.key] = field.defaultValues[lang]!
       } else if (field.defaultValue !== undefined) {
         initialFieldValues[lang][field.key] = field.defaultValue
       }
@@ -116,7 +124,7 @@ export const POST = apiHandler(async (req) => {
     try {
       const transformer = buildSectionTransformer(saved.sectionConfig as unknown as SavedSectionConfig[])
       await Promise.all(
-        LANGUAGES.map((lang) =>
+        activeLangs.map((lang) =>
           renderAndSaveAllLanguages({
             masterTemplateId: master.id,
             masterBaseFilePath: master.baseFilePath,

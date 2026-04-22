@@ -3,7 +3,9 @@ import type {
   MultiLanguageFieldValues,
   SavedSectionConfig,
   Language,
+  FieldValue,
 } from '@/lib/types/template'
+import { LANGUAGES } from '@/lib/types/template'
 
 export interface SetupConfig {
   activeSections: string[]
@@ -33,6 +35,7 @@ interface EditorStore {
 
   // Language
   activeLanguage: Language
+  supportedLanguages: Language[]
 
   // State
   isDirty: boolean
@@ -47,9 +50,10 @@ interface EditorStore {
     fieldValues: MultiLanguageFieldValues
     sectionConfig: SavedSectionConfig[]
     masterPreviewHtml: string
+    supportedLanguages: Language[]
   }) => void
   setTemplateName: (name: string) => void
-  setFieldValue: (key: string, value: string) => void
+  setFieldValue: (key: string, value: FieldValue) => void
   applySetupConfig: (config: SetupConfig) => void
   setDevice: (device: EditorStore['device']) => void
   setActiveLanguage: (lang: Language) => void
@@ -61,7 +65,7 @@ interface EditorStore {
 }
 
 const EMPTY_FIELD_VALUES: MultiLanguageFieldValues = {
-  en: {}, fr: {}, de: {}, it: {}, es: {},
+  en: {}, fr: {}, frca: {}, de: {}, it: {}, es: {},
 }
 
 export const useEditorStore = create<EditorStore>((set) => ({
@@ -75,6 +79,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   renderedHtml: '',
   device: 'desktop',
   activeLanguage: 'en',
+  supportedLanguages: LANGUAGES,
   isDirty: false,
   isSaving: false,
   isSetupModalOpen: false,
@@ -91,8 +96,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
       fieldValues: data.fieldValues,
       activeSections,
       masterPreviewHtml: data.masterPreviewHtml,
+      supportedLanguages: data.supportedLanguages,
+      activeLanguage: data.supportedLanguages[0] ?? 'en',
       isDirty: false,
-      // Only open setup on first creation (no saved sectionConfig yet)
       isSetupModalOpen: data.sectionConfig.length === 0,
     })
   },
@@ -123,7 +129,4 @@ export const useEditorStore = create<EditorStore>((set) => ({
   setRenderedHtml: (html) => set({ renderedHtml: html }),
   setIsSaving: (v) => set({ isSaving: v }),
   markClean: () => set({ isDirty: false }),
-
-  // Expose current field values for the active language + active sections
-  // (computed externally — see useEditorPreview hook)
 }))
