@@ -40,6 +40,7 @@ export const GET = apiHandler(async (req, ctx) => {
       masterTemplateId: master.id,
       baseFilePath: master.baseFilePath,
       lang,
+      brand: master.brand,
       lockedFields: master.lockedFields as unknown as LockedFieldConfig[],
       editableFields: master.editableFields as unknown as TemplateFieldConfig[],
       fieldValues: saved.fieldValues as unknown as MultiLanguageFieldValues,

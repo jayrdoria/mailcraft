@@ -19,6 +19,7 @@ async function rerender(saved: {
   renderedBasePath: string | null
   masterTemplate: {
     id: string
+    brand: string
     baseFilePath: string
     lockedFields: unknown
     editableFields: unknown
@@ -36,6 +37,7 @@ async function rerender(saved: {
           masterBaseFilePath: saved.masterTemplate.baseFilePath,
           savedBaseFilePath: saved.renderedBasePath!,
           lang,
+          brand: saved.masterTemplate.brand,
           lockedFields: saved.masterTemplate.lockedFields as unknown as LockedFieldConfig[],
           editableFields: saved.masterTemplate.editableFields as unknown as TemplateFieldConfig[],
           fieldValues: saved.fieldValues as unknown as MultiLanguageFieldValues,

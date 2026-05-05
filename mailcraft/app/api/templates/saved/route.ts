@@ -130,6 +130,7 @@ export const POST = apiHandler(async (req) => {
             masterBaseFilePath: master.baseFilePath,
             savedBaseFilePath: saved.renderedBasePath!,
             lang,
+            brand: master.brand,
             lockedFields: master.lockedFields as unknown as LockedFieldConfig[],
             editableFields,
             fieldValues: saved.fieldValues as unknown as MultiLanguageFieldValues,

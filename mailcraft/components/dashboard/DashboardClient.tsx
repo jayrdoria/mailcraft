@@ -213,7 +213,7 @@ export default function DashboardClient() {
                          focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          {(['ALL', 'STAKES', 'X7'] as BrandFilter[]).map((b) => (
+          {(['ALL', 'STAKES', 'STAKES_CASINO', 'X7'] as BrandFilter[]).map((b) => (
             <button
               key={b}
               onClick={() => setBrandFilter(b)}

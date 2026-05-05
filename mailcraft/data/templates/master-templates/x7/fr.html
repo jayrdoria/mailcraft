@@ -39,7 +39,7 @@
               <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#000000" class="main" style="background-color: #000000; max-width: 560px">
                 <tbody>
 
-                  <!-- LOGO — X7 logo (locked) -->
+                  <!-- LOGO -->
                   <tr>
                     <td align="center" class="logo-td" style="padding: 20px 20px 12px 20px; background-color: #000000;">
                       <a href="{{LOGO_LINK}}">
@@ -80,12 +80,22 @@
 
                   <!-- USERNAME -->
                   <tr>
-                    <td align="center" class="username-td" style="padding: 0 48px 12px 48px; background-color: #000000;">
-                      <p style="margin: 0; font-family: &quot;Open Sans&quot;, sans-serif; font-size: 14px; font-weight: 400; color: #777777; text-align: center; line-height: 1.5;">
+                    <td align="center" class="username-td" style="padding: 0 48px 4px 48px; background-color: #000000;">
+                      <p style="margin: 0; font-family: &quot;Open Sans&quot;, sans-serif; font-size: 14px; font-weight: 400; color: #888888; text-align: center; line-height: 1.5;">
                         {{USERNAME_LABEL}}: {{customer.id}}
                       </p>
                     </td>
                   </tr>
+
+                  <!-- SECTION:START:FORGOT_PASSWORD -->
+                  <tr>
+                    <td align="center" style="padding: 0 48px 12px 48px; background-color: #000000;">
+                      <p style="margin: 0; font-family: &quot;Open Sans&quot;, sans-serif; font-size: 14px; font-weight: 400; color: #888888; text-align: center; line-height: 1.5;">
+                        {{FORGOT_LABEL}} <a href="{{FORGOT_LINK}}" target="_blank" style="font-weight: 700; text-decoration: underline; background: linear-gradient(90deg, #d9d9d9 0%, #ff3263 0.01%, #1800ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: #ff3263;">{{FORGOT_CTA}}</a>
+                      </p>
+                    </td>
+                  </tr>
+                  <!-- SECTION:END:FORGOT_PASSWORD -->
 
                   <!-- SECTION:START:THUMBNAILS -->
                   <tr>
@@ -145,23 +155,37 @@
 
                   <!-- SECTION:START:TERMS -->
                   <tr>
-                    <td class="terms-td" style="padding: 14px 36px 6px 36px; background-color: #000000; font-family: &quot;Open Sans&quot;, sans-serif; font-size: 14px; line-height: 1.6; color: #888888; text-align: justify;">
+                    <td class="terms-td" style="padding: 14px 36px 14px 36px; background-color: #000000; font-family: &quot;Open Sans&quot;, sans-serif; font-size: 14px; line-height: 1.6; color: #888888; text-align: justify;">
                       {{TERMS_TEXT}}
                     </td>
                   </tr>
                   <!-- SECTION:END:TERMS -->
 
-                  <!-- FOOTER LOGOS — 3 logos, locked images, editable links -->
+                  <!-- TERMS DIVIDER BOTTOM -->
+                  <tr>
+                    <td style="padding: 0; background-color: #000000; line-height: 0; font-size: 0;">
+                      <div style="height: 2px; background-color: #ff3263; background: linear-gradient(90deg, #d9d9d9 0%, #ff3263 0.01%, #1800ff 100%); margin: 0 36px;"></div>
+                    </td>
+                  </tr>
+
+                  <!-- PAYMENT METHODS -->
+                  <tr>
+                    <td align="center" style="padding: 12px 36px; background-color: #000000;">
+                      <img src="https://scdn.ntgm.rocks/image/stakes/auto/auto/X7%20payment%20method.png" alt="Payment Methods" width="488" style="display: block; max-width: 100%;" />
+                    </td>
+                  </tr>
+
+                  <!-- FOOTER LOGOS -->
                   <tr>
                     <td align="center" class="footer-icons-td" style="padding: 16px 8px 10px 8px; background-color: #000000;">
                       <a href="{{FOOTER_LOGO1_LINK}}" target="_blank" style="display: inline-block; margin-right: 14px; text-decoration: none; vertical-align: middle;">
-                        <img src="https://ci3.googleusercontent.com/meips/ADKq_NYQAwKHfUWEye_Xpa0vTPZcXtmLXqng1L9Or61Ap9K2BevsVZ2OP6ZbIUuIYooP1jz9eH_AORshL9p4FBAewfqNFwYLFgexrMKPXJV311mB81_JTRKzq86QL0LHXUOowICPmRx3E1t5s6j34sGFq3N124IHVgi-qpQ=s0-d-e1-ft#https://mcusercontent.com/67e6e0bc2e88f76ace004d9fb/images/2d796751-f544-2b77-a0cc-7e02ed731ae0.png" height="32" width="150" alt="Play Responsibly" draggable="false" style="display: inline-block; vertical-align: middle; height: 32px; width: 150px" />
+                        <img src="https://scdn.ntgm.rocks/image/stakes/auto/auto/Play%20ResponsiblyApril30.png" height="28" width="130" alt="Play Responsibly" draggable="false" style="display: inline-block; vertical-align: middle; height: 28px; width: 130px" />
                       </a>
                       <a href="{{FOOTER_LOGO2_LINK}}" target="_blank" style="display: inline-block; margin-right: 14px; text-decoration: none; vertical-align: middle;">
-                        <img src="https://ci3.googleusercontent.com/meips/ADKq_NYEVifLvPQjGDjm1Zk5S491T16o4hJTohm_1BaitmXTHf-x-tqzKq8xse_1393ooYIhFUiZCGunPOQ8bRwzXt3PRxwNIQ2rmR928htZTD3j0KbN8fyjTT1DIWB6EP5dMRuCXnFsnlJO11u2twTrWpnoNVa_MjXY7DE=s0-d-e1-ft#https://mcusercontent.com/67e6e0bc2e88f76ace004d9fb/images/2000e830-4711-07b6-92a6-904fcbb85006.png" height="32" width="32" alt="Legal Age 18+" draggable="false" style="display: inline-block; vertical-align: middle; height: 32px; width: 32px" />
+                        <img src="https://scdn.ntgm.rocks/image/stakes/auto/auto/18%20April30.png" height="28" width="28" alt="18+" draggable="false" style="display: inline-block; vertical-align: middle; height: 28px; width: 28px" />
                       </a>
                       <a href="{{FOOTER_LOGO3_LINK}}" target="_blank" style="display: inline-block; text-decoration: none; vertical-align: middle;">
-                        <img src="https://userimg-assets.customeriomail.com/images/client-env-110039/editor_images/Kahnawake_orig%20color-01HPKA6D9EF83NMEEN6D1CC3AJ.png" height="32" width="112" alt="Kahnawake Gaming Commission" draggable="false" style="display: inline-block; vertical-align: middle; height: 32px; width: 112px" />
+                        <img src="https://scdn.ntgm.rocks/image/stakes/auto/auto/kahnawaki-gaming-logoApril30.png" height="28" width="100" alt="Kahnawake Gaming Commission" draggable="false" style="display: inline-block; vertical-align: middle; height: 28px; width: 100px" />
                       </a>
                     </td>
                   </tr>

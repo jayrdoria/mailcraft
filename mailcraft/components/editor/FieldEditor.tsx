@@ -5,7 +5,8 @@ import { Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
 import { clientRender } from '@/lib/clientRender'
-import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue } from '@/lib/types/template'
+import ParagraphEditor from '@/components/editor/ParagraphEditor'
+import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue, BodyParagraph } from '@/lib/types/template'
 import { LANGUAGE_LABELS, LANGUAGES } from '@/lib/types/template'
 
 interface FieldEditorProps {
@@ -34,6 +35,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const setRenderedHtml = useEditorStore((s) => s.setRenderedHtml)
   const requiredFields = useEditorStore((s) => s.requiredFields)
   const supportedLanguages = useEditorStore((s) => s.supportedLanguages)
+  const brand = useEditorStore((s) => s.brand)
 
   // Build current section config from active sections
   const currentSectionConfig: SavedSectionConfig[] = sectionConfig.map((s) => ({
@@ -43,8 +45,8 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
 
   // Debounced preview update
   const updatePreview = useDebounce(
-    (html: string, values: Record<string, FieldValue>, sc: SavedSectionConfig[]) => {
-      const rendered = clientRender(html, values, sc)
+    (html: string, values: Record<string, FieldValue>, sc: SavedSectionConfig[], br: string) => {
+      const rendered = clientRender(html, values, sc, br)
       setRenderedHtml(rendered)
     },
     300
@@ -53,7 +55,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const currentLangValues = fieldValues[activeLanguage] ?? {}
 
   useEffect(() => {
-    updatePreview(masterPreviewHtml, currentLangValues, currentSectionConfig)
+    updatePreview(masterPreviewHtml, currentLangValues, currentSectionConfig, brand)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [masterPreviewHtml, fieldValues, activeSections, activeLanguage])
 
@@ -123,17 +125,23 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                 {fields.map((field) => {
                   const isRequired = requiredFields.includes(field.key) || field.defaultRequired
 
-                  // Paragraphs fields are handled by ParagraphEditor (Phase 4)
                   if (field.type === 'paragraphs') {
+                    const rawParagraphs = currentLangValues[field.key]
+                    const paragraphs: BodyParagraph[] =
+                      Array.isArray(rawParagraphs) && rawParagraphs.length > 0
+                        ? rawParagraphs
+                        : (field.defaultParagraphs ?? [{ id: 'p1', html: '' }])
                     return (
                       <div key={field.key}>
                         <label className="flex items-center gap-1 text-xs font-medium mb-1">
                           {field.label}
                           {isRequired && <span className="text-destructive">*</span>}
                         </label>
-                        <p className="text-xs text-muted-foreground px-3 py-2 rounded-md border bg-muted/40">
-                          Paragraph editor — coming soon
-                        </p>
+                        <ParagraphEditor
+                          key={`${field.key}-${activeLanguage}`}
+                          value={paragraphs}
+                          onChange={(v) => setFieldValue(field.key, v)}
+                        />
                       </div>
                     )
                   }

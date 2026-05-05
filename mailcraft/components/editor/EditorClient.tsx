@@ -85,6 +85,7 @@ export default function EditorClient({
       masterTemplateId: masterTemplate.id,
       savedTemplateId,
       templateName: savedTemplateName,
+      brand: masterTemplate.brand,
       fieldValues,
       sectionConfig,
       masterPreviewHtml,
@@ -260,7 +261,13 @@ export default function EditorClient({
           </Link>
 
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span>{masterTemplate.brand === 'STAKES' ? 'Stakes' : 'X7 Casino'}</span>
+            <span>
+              {masterTemplate.brand === 'STAKES'
+                ? 'Stakes'
+                : masterTemplate.brand === 'STAKES_CASINO'
+                  ? 'Stakes Casino'
+                  : 'X7 Casino'}
+            </span>
             <span>/</span>
             <span>{masterTemplate.name}</span>
           </div>

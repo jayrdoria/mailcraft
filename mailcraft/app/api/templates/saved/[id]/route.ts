@@ -88,6 +88,7 @@ export const PATCH = apiHandler(async (req, ctx) => {
             masterBaseFilePath: master.baseFilePath,
             savedBaseFilePath: updated.renderedBasePath!,
             lang,
+            brand: master.brand,
             lockedFields: master.lockedFields as unknown as LockedFieldConfig[],
             editableFields: master.editableFields as unknown as TemplateFieldConfig[],
             fieldValues: updated.fieldValues as unknown as MultiLanguageFieldValues,

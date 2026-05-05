@@ -1,15 +1,18 @@
 import type { SavedSectionConfig, FieldValue } from '@/lib/types/template'
+import { renderBodyParagraphs } from '@/lib/paragraphRenderer'
 
 // ─────────────────────────────────────────────
 // Token injection
 // ─────────────────────────────────────────────
 
-export function injectTokens(html: string, tokens: Record<string, FieldValue>): string {
+export function injectTokens(html: string, tokens: Record<string, FieldValue>, brand = 'STAKES'): string {
   let result = html
   for (const [key, value] of Object.entries(tokens)) {
-    if (Array.isArray(value)) continue // BodyParagraph[] — rendered in Phase 3
     const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    result = result.replace(new RegExp(`\\{\\{${escaped}\\}\\}`, 'g'), value)
+    const replacement = Array.isArray(value)
+      ? renderBodyParagraphs(value, brand)
+      : value
+    result = result.replace(new RegExp(`\\{\\{${escaped}\\}\\}`, 'g'), replacement)
   }
   return result
 }
@@ -112,9 +115,10 @@ export function parseSectionNames(html: string): { name: string; label: string }
 export function clientRender(
   masterPreviewHtml: string,
   fieldValues: Record<string, FieldValue>,
-  sectionConfig: SavedSectionConfig[]
+  sectionConfig: SavedSectionConfig[],
+  brand = 'STAKES'
 ): string {
   let html = applySectionConfig(masterPreviewHtml, sectionConfig)
-  html = injectTokens(html, fieldValues)
+  html = injectTokens(html, fieldValues, brand)
   return html
 }

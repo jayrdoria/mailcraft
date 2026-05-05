@@ -10,6 +10,7 @@ import { LANGUAGES } from '@/lib/types/template'
 import { readTemplateHtml, writeTemplateHtml } from '@/lib/services/fileService'
 import { disableSection, deleteSection } from '@/lib/services/sectionService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
+import { renderBodyParagraphs } from '@/lib/paragraphRenderer'
 
 // ─────────────────────────────────────────────
 // Section config transformer
@@ -38,12 +39,14 @@ export function buildSectionTransformer(
 // CIO merge tags (*|...|*) are passed through as literal strings
 // ─────────────────────────────────────────────
 
-function injectTokens(html: string, tokens: Record<string, FieldValue>): string {
+function injectTokens(html: string, tokens: Record<string, FieldValue>, brand = 'STAKES'): string {
   let result = html
   for (const [key, value] of Object.entries(tokens)) {
-    if (Array.isArray(value)) continue // BodyParagraph[] — rendered in Phase 3
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    result = result.replace(new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g'), value)
+    const replacement = Array.isArray(value)
+      ? renderBodyParagraphs(value, brand)
+      : value
+    result = result.replace(new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g'), replacement)
   }
   return result
 }
@@ -97,15 +100,16 @@ export async function renderTemplate(params: {
   masterTemplateId: string
   baseFilePath: string
   lang: Language
+  brand: string
   lockedFields: LockedFieldConfig[]
   editableFields: TemplateFieldConfig[]
   fieldValues: MultiLanguageFieldValues
 }): Promise<string> {
-  const { masterTemplateId, baseFilePath, lang, lockedFields, fieldValues } = params
+  const { masterTemplateId, baseFilePath, lang, brand, lockedFields, fieldValues } = params
 
   const masterHtml = await getMasterHtml(masterTemplateId, baseFilePath, lang)
 
-  // Pass 1: inject locked fields
+  // Pass 1: inject locked fields (all strings, brand irrelevant here)
   const lockedTokens: Record<string, string> = {}
   for (const field of lockedFields) {
     lockedTokens[field.key] = field.value
@@ -114,7 +118,7 @@ export async function renderTemplate(params: {
 
   // Pass 2: inject user's editable field values for this language
   const langValues = fieldValues[lang] ?? {}
-  html = injectTokens(html, langValues)
+  html = injectTokens(html, langValues, brand)
 
   return html
 }
@@ -128,6 +132,7 @@ export async function renderAndSaveAllLanguages(params: {
   masterBaseFilePath: string
   savedBaseFilePath: string
   lang: Language
+  brand: string
   lockedFields: LockedFieldConfig[]
   editableFields: TemplateFieldConfig[]
   fieldValues: MultiLanguageFieldValues
@@ -138,6 +143,7 @@ export async function renderAndSaveAllLanguages(params: {
     masterBaseFilePath,
     savedBaseFilePath,
     lang,
+    brand,
     lockedFields,
     editableFields,
     fieldValues,
@@ -148,6 +154,7 @@ export async function renderAndSaveAllLanguages(params: {
     masterTemplateId,
     baseFilePath: masterBaseFilePath,
     lang,
+    brand,
     lockedFields,
     editableFields,
     fieldValues,

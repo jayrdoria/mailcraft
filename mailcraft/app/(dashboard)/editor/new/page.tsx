@@ -78,7 +78,11 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
     // HTML files not yet on disk in dev
   }
 
-  const defaultName = `${masterTemplate.brand === 'STAKES' ? 'Stakes' : 'X7 Casino'} — ${masterTemplate.name}`
+  const brandLabel =
+    masterTemplate.brand === 'STAKES' ? 'Stakes'
+    : masterTemplate.brand === 'STAKES_CASINO' ? 'Stakes Casino'
+    : 'X7 Casino'
+  const defaultName = `${brandLabel} — ${masterTemplate.name}`
 
   return (
     <EditorClient

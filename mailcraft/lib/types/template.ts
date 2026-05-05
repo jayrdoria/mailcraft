@@ -103,9 +103,10 @@ export interface TemplateSection {
 // BRANDS
 // ─────────────────────────────────────────────
 
-export type BrandSlug = 'STAKES' | 'X7'
+export type BrandSlug = 'STAKES' | 'STAKES_CASINO' | 'X7'
 
 export const BRAND_LABELS: Record<BrandSlug, string> = {
-  STAKES: 'Stakes',
-  X7:     'X7 Casino',
+  STAKES:        'Stakes',
+  STAKES_CASINO: 'Stakes Casino',
+  X7:            'X7 Casino',
 }

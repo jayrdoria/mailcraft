@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "Brand" ADD VALUE 'STAKES_CASINO';

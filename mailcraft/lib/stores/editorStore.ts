@@ -18,6 +18,7 @@ interface EditorStore {
   templateName: string
   masterTemplateId: string
   savedTemplateId: string | null
+  brand: string
 
   // Master HTML (fetched once — locked fields pre-injected, editable fields still {{TOKEN}})
   masterPreviewHtml: string
@@ -47,6 +48,7 @@ interface EditorStore {
     masterTemplateId: string
     savedTemplateId: string | null
     templateName: string
+    brand: string
     fieldValues: MultiLanguageFieldValues
     sectionConfig: SavedSectionConfig[]
     masterPreviewHtml: string
@@ -72,6 +74,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   templateName: '',
   masterTemplateId: '',
   savedTemplateId: null,
+  brand: '',
   masterPreviewHtml: '',
   activeSections: [],
   requiredFields: [],
@@ -93,6 +96,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
       masterTemplateId: data.masterTemplateId,
       savedTemplateId: data.savedTemplateId,
       templateName: data.templateName,
+      brand: data.brand,
       fieldValues: data.fieldValues,
       activeSections,
       masterPreviewHtml: data.masterPreviewHtml,
