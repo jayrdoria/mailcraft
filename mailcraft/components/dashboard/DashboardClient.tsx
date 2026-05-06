@@ -259,7 +259,7 @@ export default function DashboardClient() {
                            hover:border-ring/50 transition-colors overflow-hidden"
               >
                 {/* Preview image */}
-                <div className="relative w-full bg-muted overflow-hidden" style={{ paddingBottom: '52%' }}>
+                <div className="relative w-full overflow-hidden" style={{ paddingBottom: '52%' }}>
                   {t.previewImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -268,8 +268,22 @@ export default function DashboardClient() {
                       className="absolute inset-0 w-full h-full object-cover object-top"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-muted-foreground/40" />
+                    <div
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
+                      style={{
+                        background:
+                          t.masterTemplate.brand === 'X7'
+                            ? 'linear-gradient(135deg, #0d0d0d 0%, #1a0033 100%)'
+                            : 'linear-gradient(135deg, #0d0d0d 0%, #2a0a0a 100%)',
+                      }}
+                    >
+                      <Mail className="w-5 h-5 text-white/20" />
+                      <span
+                        className="text-[10px] font-semibold tracking-widest uppercase"
+                        style={{ color: t.masterTemplate.brand === 'X7' ? '#ff3263' : '#ef5e5e' }}
+                      >
+                        {BRAND_LABELS[t.masterTemplate.brand]}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -358,8 +372,22 @@ export default function DashboardClient() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={s.savedTemplate.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-muted-foreground/40" />
+                    <div
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
+                      style={{
+                        background:
+                          s.savedTemplate.masterTemplate.brand === 'X7'
+                            ? 'linear-gradient(135deg, #0d0d0d 0%, #1a0033 100%)'
+                            : 'linear-gradient(135deg, #0d0d0d 0%, #2a0a0a 100%)',
+                      }}
+                    >
+                      <Mail className="w-5 h-5 text-white/20" />
+                      <span
+                        className="text-[10px] font-semibold tracking-widest uppercase"
+                        style={{ color: s.savedTemplate.masterTemplate.brand === 'X7' ? '#ff3263' : '#ef5e5e' }}
+                      >
+                        {BRAND_LABELS[s.savedTemplate.masterTemplate.brand]}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -429,8 +457,22 @@ export default function DashboardClient() {
                         className="absolute inset-0 w-full h-full object-cover object-top"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <FileText className="w-6 h-6 text-muted-foreground/40" />
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
+                        style={{
+                          background:
+                            m.brand === 'X7'
+                              ? 'linear-gradient(135deg, #0d0d0d 0%, #1a0033 100%)'
+                              : 'linear-gradient(135deg, #0d0d0d 0%, #2a0a0a 100%)',
+                        }}
+                      >
+                        <Mail className="w-5 h-5 text-white/20" />
+                        <span
+                          className="text-[10px] font-semibold tracking-widest uppercase"
+                          style={{ color: m.brand === 'X7' ? '#ff3263' : '#ef5e5e' }}
+                        >
+                          {BRAND_LABELS[m.brand]}
+                        </span>
                       </div>
                     )}
                   </div>

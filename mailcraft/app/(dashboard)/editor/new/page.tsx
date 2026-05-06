@@ -52,7 +52,8 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
   for (const lang of supportedLanguages) {
     for (const field of editableFields) {
       if (field.type === 'paragraphs') {
-        defaultFieldValues[lang][field.key] = field.defaultParagraphs ?? []
+        defaultFieldValues[lang][field.key] =
+          field.defaultParagraphsByLang?.[lang] ?? field.defaultParagraphs ?? []
       } else {
         const value = field.defaultValues?.[lang] ?? field.defaultValue
         if (value !== undefined) {
@@ -68,14 +69,19 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
   let masterPreviewHtml = ''
   try {
     const cacheKey = CacheKeys.masterTemplateHtml(masterId, 'en')
-    let rawHtml = await redis.get(cacheKey)
+    let rawHtml: string | null = null
+    try {
+      rawHtml = await redis.get(cacheKey)
+    } catch {
+      // Redis unavailable — fall through to disk read
+    }
     if (!rawHtml) {
       rawHtml = await readTemplateHtml(masterTemplate.baseFilePath, 'en')
-      await redis.set(cacheKey, rawHtml, 'EX', CacheTTL.masterTemplateHtml)
+      redis.set(cacheKey, rawHtml, 'EX', CacheTTL.masterTemplateHtml).catch(() => {})
     }
     masterPreviewHtml = injectLockedFields(rawHtml, lockedFields)
   } catch {
-    // HTML files not yet on disk in dev
+    // HTML file not found
   }
 
   const brandLabel =

@@ -25,6 +25,7 @@ interface EditorStore {
 
   // Setup config
   activeSections: string[]
+  deletedSections: string[]
   requiredFields: string[]
 
   // Field values — per language
@@ -53,6 +54,8 @@ interface EditorStore {
     sectionConfig: SavedSectionConfig[]
     masterPreviewHtml: string
     supportedLanguages: Language[]
+    openSetupModal: boolean
+    allSectionNames?: string[]
   }) => void
   setTemplateName: (name: string) => void
   setFieldValue: (key: string, value: FieldValue) => void
@@ -77,6 +80,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   brand: '',
   masterPreviewHtml: '',
   activeSections: [],
+  deletedSections: [],
   requiredFields: [],
   fieldValues: EMPTY_FIELD_VALUES,
   renderedHtml: '',
@@ -88,8 +92,11 @@ export const useEditorStore = create<EditorStore>((set) => ({
   isSetupModalOpen: false,
 
   init: (data) => {
-    const activeSections = data.sectionConfig
-      .filter((s) => s.isActive && !s.isDeleted)
+    const activeSections = data.sectionConfig.length > 0
+      ? data.sectionConfig.filter((s) => s.isActive && !s.isDeleted).map((s) => s.name)
+      : (data.allSectionNames ?? [])
+    const deletedSections = data.sectionConfig
+      .filter((s) => s.isDeleted)
       .map((s) => s.name)
 
     set({
@@ -99,11 +106,12 @@ export const useEditorStore = create<EditorStore>((set) => ({
       brand: data.brand,
       fieldValues: data.fieldValues,
       activeSections,
+      deletedSections,
       masterPreviewHtml: data.masterPreviewHtml,
       supportedLanguages: data.supportedLanguages,
       activeLanguage: data.supportedLanguages[0] ?? 'en',
       isDirty: false,
-      isSetupModalOpen: data.sectionConfig.length === 0,
+      isSetupModalOpen: data.openSetupModal,
     })
   },
 
@@ -122,8 +130,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
     })),
 
   applySetupConfig: (config) => {
-    const { activeSections, requiredFields } = config
-    set({ activeSections, requiredFields, isDirty: true })
+    const { activeSections, requiredFields, deletedSections } = config
+    set({ activeSections, deletedSections, requiredFields, isDirty: true })
   },
 
   setDevice: (device) => set({ device }),

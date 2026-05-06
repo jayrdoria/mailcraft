@@ -13,13 +13,22 @@ function normalizeBold(html: string): string {
 }
 
 function stripToSafeHtml(html: string): string {
-  let result = normalizeBold(html)
+  let result = html
+  // Remove entire block elements that carry Word junk (style sheets, head, scripts, comments)
+  result = result.replace(/<style[\s\S]*?<\/style>/gi, '')
+  result = result.replace(/<head[\s\S]*?<\/head>/gi, '')
+  result = result.replace(/<script[\s\S]*?<\/script>/gi, '')
+  result = result.replace(/<!--[\s\S]*?-->/g, '')
+  result = result.replace(/<xml[\s\S]*?<\/xml>/gi, '')
+  result = normalizeBold(result)
   result = result
     .replace(/<strong style="font-weight:700">/g, '\x00OPEN\x00')
     .replace(/<\/strong>/g, '\x00CLOSE\x00')
     .replace(/<[^>]+>/g, '')
     .replace(/\x00OPEN\x00/g, '<strong style="font-weight:700">')
     .replace(/\x00CLOSE\x00/g, '</strong>')
+  // Collapse whitespace left by stripped tags
+  result = result.replace(/\s+/g, ' ').trim()
   return result
 }
 

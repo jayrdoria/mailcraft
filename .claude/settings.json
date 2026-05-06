@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(node -e ' *)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(npx tsx --env-file=.env.development -e ' *)"
     ]
   }
 }

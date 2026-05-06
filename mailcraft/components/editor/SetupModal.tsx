@@ -204,8 +204,7 @@ export default function SetupModal({
           <div className="flex gap-2 px-3 py-2.5 rounded-md bg-muted/50 text-[11px] text-muted-foreground">
             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span>
-              Logo, verify button link, footer, and legal text are managed by your admin.
-              You can change the button text but not its link.
+              Responsible gaming logos and footer legal text are managed by your admin and always included when the Footer section is on.
             </span>
           </div>
         </div>

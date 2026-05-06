@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
 import { toast } from 'sonner'
-import { Trash2, BookOpen } from 'lucide-react'
+import { Trash2, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BRAND_LABELS } from '@/lib/types/template'
 import type { BrandSlug } from '@/lib/types/template'
@@ -88,7 +88,7 @@ export default function MasterTemplatesClient() {
         <div className="p-8 text-center text-sm text-muted-foreground">Loading…</div>
       ) : templates.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
-          <BookOpen className="w-8 h-8 text-muted-foreground mb-2" />
+          <Mail className="w-8 h-8 text-muted-foreground mb-2" />
           <p className="text-sm font-medium">No master templates</p>
           <p className="text-xs text-muted-foreground mt-1">
             Master templates are seeded via the database seed script.
@@ -114,8 +114,22 @@ export default function MasterTemplatesClient() {
                       className="absolute inset-0 w-full h-full object-cover object-top"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-muted-foreground/40" />
+                    <div
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
+                      style={{
+                        background:
+                          t.brand === 'X7'
+                            ? 'linear-gradient(135deg, #0d0d0d 0%, #1a0033 100%)'
+                            : 'linear-gradient(135deg, #0d0d0d 0%, #2a0a0a 100%)',
+                      }}
+                    >
+                      <Mail className="w-5 h-5 text-white/20" />
+                      <span
+                        className="text-[10px] font-semibold tracking-widest uppercase"
+                        style={{ color: t.brand === 'X7' ? '#ff3263' : '#ef5e5e' }}
+                      >
+                        {BRAND_LABELS[t.brand]}
+                      </span>
                     </div>
                   )}
                   {/* Status badge overlay */}

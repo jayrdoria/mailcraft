@@ -97,7 +97,7 @@ export function parseSectionNames(html: string): { name: string; label: string }
   let match: RegExpExecArray | null
   while ((match = re.exec(html)) !== null) {
     const name = match[1]
-    const label = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+    const label = name.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
     if (!sections.find((s) => s.name === name)) {
       sections.push({ name, label })
     }

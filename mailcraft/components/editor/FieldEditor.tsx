@@ -9,6 +9,10 @@ import ParagraphEditor from '@/components/editor/ParagraphEditor'
 import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue, BodyParagraph } from '@/lib/types/template'
 import { LANGUAGE_LABELS, LANGUAGES } from '@/lib/types/template'
 
+function normalizeGroup(group: string): string {
+  return group.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
+}
+
 interface FieldEditorProps {
   editableFields: TemplateFieldConfig[]
   sectionConfig: SavedSectionConfig[]
@@ -96,10 +100,11 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
           const sectionLabel =
             sectionName === '__default__'
               ? null
-              : sectionName.charAt(0).toUpperCase() + sectionName.slice(1).toLowerCase()
+              : sectionName
 
           const isSectionActive =
-            sectionName === '__default__' || activeSections.includes(sectionName.toUpperCase())
+            sectionName === '__default__' ||
+            activeSections.includes(normalizeGroup(sectionName))
 
           return (
             <div key={sectionName} className={cn(!isSectionActive && 'opacity-50 pointer-events-none')}>
@@ -130,7 +135,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                     const paragraphs: BodyParagraph[] =
                       Array.isArray(rawParagraphs) && rawParagraphs.length > 0
                         ? rawParagraphs
-                        : (field.defaultParagraphs ?? [{ id: 'p1', html: '' }])
+                        : (field.defaultParagraphsByLang?.[activeLanguage as Language] ?? field.defaultParagraphs ?? [{ id: 'p1', html: '' }])
                     return (
                       <div key={field.key}>
                         <label className="flex items-center gap-1 text-xs font-medium mb-1">
@@ -198,7 +203,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
         {/* Locked fields notice */}
         <div className="flex items-start gap-2 px-3 py-2.5 rounded-md bg-muted/50 text-[11px] text-muted-foreground">
           <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <span>Logo, footer & legal content are managed by your admin.</span>
+          <span>Logo, footer legal text, and responsible gaming logos are managed by your admin.</span>
         </div>
       </div>
     </div>

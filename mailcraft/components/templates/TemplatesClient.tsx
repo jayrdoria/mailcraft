@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
-import { Search } from 'lucide-react'
+import { Search, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BRAND_LABELS } from '@/lib/types/template'
 import type { BrandSlug } from '@/lib/types/template'
@@ -153,8 +153,22 @@ export default function TemplatesClient() {
                       className="absolute inset-0 w-full h-full object-cover object-top"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-xs text-muted-foreground">No preview</span>
+                    <div
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
+                      style={{
+                        background:
+                          m.brand === 'X7'
+                            ? 'linear-gradient(135deg, #0d0d0d 0%, #1a0033 100%)'
+                            : 'linear-gradient(135deg, #0d0d0d 0%, #2a0a0a 100%)',
+                      }}
+                    >
+                      <Mail className="w-5 h-5 text-white/20" />
+                      <span
+                        className="text-[10px] font-semibold tracking-widest uppercase"
+                        style={{ color: m.brand === 'X7' ? '#ff3263' : '#ef5e5e' }}
+                      >
+                        {BRAND_LABELS[m.brand]}
+                      </span>
                     </div>
                   )}
                 </div>

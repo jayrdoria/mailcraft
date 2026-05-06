@@ -29,8 +29,10 @@ export interface TemplateFieldConfig {
   defaultValue?: string
   // Per-language overrides for string fields (url, text, richtext, link)
   defaultValues?: Partial<Record<Language, string>>
-  // Initial paragraphs for 'paragraphs' type fields
+  // Initial paragraphs for 'paragraphs' type fields (used when no per-language override exists)
   defaultParagraphs?: BodyParagraph[]
+  // Per-language overrides for paragraph fields
+  defaultParagraphsByLang?: Partial<Record<Language, BodyParagraph[]>>
   group?: string
 }
 

@@ -12,7 +12,18 @@ import { ArrowLeft, Settings, Save, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
-import { parseSectionNames } from '@/lib/clientRender'
+
+function normalizeGroup(group: string): string {
+  return group.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
+}
+
+const SECTION_DESCRIPTIONS: Record<string, string> = {
+  HEADER: 'Logo, banner image, and banner link',
+  BODY: 'Greeting, body paragraphs, and CTA button',
+  USERNAME_PASSWORD: 'Username display and forgot password link',
+  THUMBNAILS: 'Promotional thumbnail images and labels',
+  FOOTER: 'Terms & conditions and compliance footer',
+}
 import SetupModal from './SetupModal'
 import FieldEditor from './FieldEditor'
 import LivePreview from './LivePreview'
@@ -63,6 +74,7 @@ export default function EditorClient({
   const templateName = useEditorStore((s) => s.templateName)
   const setTemplateName = useEditorStore((s) => s.setTemplateName)
   const activeSections = useEditorStore((s) => s.activeSections)
+  const deletedSections = useEditorStore((s) => s.deletedSections)
   const storeFieldValues = useEditorStore((s) => s.fieldValues)
   const isDirty = useEditorStore((s) => s.isDirty)
   const isSaving = useEditorStore((s) => s.isSaving)
@@ -70,13 +82,28 @@ export default function EditorClient({
   const markClean = useEditorStore((s) => s.markClean)
   const currentSavedId = useEditorStore((s) => s.savedTemplateId)
 
-  // Sections parsed from master HTML
-  const allSections = parseSectionNames(masterPreviewHtml)
+  // Sections derived from field groups (all groups become toggleable in Configure)
+  const allSections = (() => {
+    const groups: string[] = []
+    const seen = new Set<string>()
+    for (const field of masterTemplate.editableFields) {
+      const g = field.group
+      if (g && !seen.has(g)) { groups.push(g); seen.add(g) }
+    }
+    return groups.map((g) => ({
+      name: normalizeGroup(g),
+      label: g,
+      description: SECTION_DESCRIPTIONS[normalizeGroup(g)],
+    }))
+  })()
 
-  // Build current section config for field editor
-  const currentSectionConfig: SavedSectionConfig[] = sectionConfig.map((s) => ({
-    ...s,
+  // Build section config from parsed HTML sections + store state (not from the saved prop which is empty on new templates)
+  const savedDeletedSet = new Set(sectionConfig.filter((s) => s.isDeleted).map((s) => s.name))
+  const currentSectionConfig: SavedSectionConfig[] = allSections.map((s) => ({
+    name: s.name,
+    label: s.label,
     isActive: activeSections.includes(s.name),
+    isDeleted: deletedSections.includes(s.name) || savedDeletedSet.has(s.name),
   }))
 
   // Initialize store on mount
@@ -90,6 +117,8 @@ export default function EditorClient({
       sectionConfig,
       masterPreviewHtml,
       supportedLanguages,
+      openSetupModal: sectionConfig.length === 0 && allSections.length > 0,
+      allSectionNames: allSections.map((s) => s.name),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

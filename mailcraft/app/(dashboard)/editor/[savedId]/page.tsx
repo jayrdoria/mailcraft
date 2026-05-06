@@ -70,14 +70,19 @@ export default async function EditorPage({ params }: EditorPageProps) {
   let masterPreviewHtml = ''
   try {
     const cacheKey = CacheKeys.masterTemplateHtml(saved.masterTemplate.id, 'en')
-    let rawHtml = await redis.get(cacheKey)
+    let rawHtml: string | null = null
+    try {
+      rawHtml = await redis.get(cacheKey)
+    } catch {
+      // Redis unavailable — fall through to disk read
+    }
     if (!rawHtml) {
       rawHtml = await readTemplateHtml(saved.masterTemplate.baseFilePath, 'en')
-      await redis.set(cacheKey, rawHtml, 'EX', CacheTTL.masterTemplateHtml)
+      redis.set(cacheKey, rawHtml, 'EX', CacheTTL.masterTemplateHtml).catch(() => {})
     }
     masterPreviewHtml = injectLockedFields(rawHtml, lockedFields)
   } catch {
-    // HTML not on disk yet — preview won't show on first load
+    // HTML file not found
   }
 
   return (
