@@ -203,7 +203,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
         {/* Locked fields notice */}
         <div className="flex items-start gap-2 px-3 py-2.5 rounded-md bg-muted/50 text-[11px] text-muted-foreground">
           <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <span>Logo, footer legal text, and responsible gaming logos are managed by your admin.</span>
+          <span>Brand logo and responsible gaming logos are managed by your admin.</span>
         </div>
       </div>
     </div>
