@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
@@ -16,6 +16,34 @@ function normalizeGroup(group: string): string {
 interface FieldEditorProps {
   editableFields: TemplateFieldConfig[]
   sectionConfig: SavedSectionConfig[]
+}
+
+/* Shows a debounced thumbnail for URL fields with a friendly error message */
+function ImagePreview({ src }: { src: string }) {
+  const [debouncedSrc, setDebouncedSrc] = useState('')
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    setError(false)
+    const timer = setTimeout(() => setDebouncedSrc(src), 500)
+    return () => clearTimeout(timer)
+  }, [src])
+
+  if (!debouncedSrc) return null
+
+  return error ? (
+    <p className="mt-1.5 text-[11px] text-muted-foreground">
+      Image couldn&apos;t load — check the URL
+    </p>
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={debouncedSrc}
+      alt=""
+      className="mt-1.5 h-12 w-auto rounded border object-contain bg-muted"
+      onError={() => setError(true)}
+    />
+  )
 }
 
 function useDebounce<T extends unknown[]>(fn: (...args: T) => void, delay: number) {
@@ -188,15 +216,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                         />
                       )}
 
-                      {field.type === 'url' && value && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={value}
-                          alt=""
-                          className="mt-1.5 h-12 w-auto rounded border object-contain bg-muted"
-                          onError={(e) => (e.currentTarget.style.display = 'none')}
-                        />
-                      )}
+                      {field.type === 'url' && value && <ImagePreview src={value} />}
                     </div>
                   )
                 })}

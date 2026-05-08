@@ -23,7 +23,7 @@ function BrandBadge({ brand }: { brand: BrandSlug }) {
   return (
     <span className={cn(
       'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
-      brand === 'STAKES' ? 'bg-amber-500/15 text-amber-500' : 'bg-blue-500/15 text-blue-400'
+      brand === 'STAKES' || brand === 'STAKES_CASINO' ? 'bg-stakes/15 text-stakes' : 'bg-x7/15 text-x7'
     )}>
       {BRAND_LABELS[brand]}
     </span>

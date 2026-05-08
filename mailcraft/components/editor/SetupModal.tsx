@@ -42,6 +42,7 @@ export default function SetupModal({
 
   useGSAP(
     () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
       gsap.from(modalRef.current, {
         opacity: 0,
         scale: 0.95,

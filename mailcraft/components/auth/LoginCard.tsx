@@ -10,6 +10,7 @@ export default function LoginCard() {
 
   useGSAP(
     () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
       gsap.from(cardRef.current, {
         opacity: 0,
         y: 24,
