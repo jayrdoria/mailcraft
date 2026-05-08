@@ -55,14 +55,14 @@ function formatRelativeTime(iso: string): string {
 }
 
 export default function TemplateActivityLog({ savedTemplateId }: { savedTemplateId: string }) {
-  const [open, setOpen] = useState(() => {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem('editor-activity-log-open') !== 'false'
-    }
-    return false
-  })
+  const [open, setOpen] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
   const isFirstRender = useRef(true)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('editor-activity-log-open')
+    if (stored !== 'false') setOpen(true)
+  }, [])
 
   const { data } = useQuery<{ logs: LogEntry[] }>({
     queryKey: ['activity', savedTemplateId],

@@ -21,18 +21,6 @@ export function injectTokens(html: string, tokens: Record<string, FieldValue>, b
 // Section transforms (mirrors sectionService.ts)
 // ─────────────────────────────────────────────
 
-function disableSection(html: string, name: string): string {
-  const re = new RegExp(
-    `<!-- SECTION:START:${name} -->([\\s\\S]*?)<!-- SECTION:END:${name} -->`,
-    'g'
-  )
-  return html.replace(
-    re,
-    (_, content: string) =>
-      `<!-- SECTION:DISABLED:START:${name}\n${content}\nSECTION:DISABLED:END:${name} -->`
-  )
-}
-
 function deleteSection(html: string, name: string): string {
   let result = html.replace(
     new RegExp(
@@ -63,8 +51,6 @@ export function applySectionConfig(
   for (const section of sectionConfig) {
     if (section.isDeleted) {
       result = deleteSection(result, section.name)
-    } else if (!section.isActive) {
-      result = disableSection(result, section.name)
     }
   }
   return result

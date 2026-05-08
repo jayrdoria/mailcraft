@@ -1,13 +1,11 @@
 'use client'
 
-import { apiFetch } from '@/lib/apiFetch'
-
 import { useRef } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
-import { toast } from 'sonner'
-import { Trash2, Mail } from 'lucide-react'
+import { Mail } from 'lucide-react'
+import { apiFetch } from '@/lib/apiFetch'
 import { cn } from '@/lib/utils'
 import { BRAND_LABELS } from '@/lib/types/template'
 import type { BrandSlug } from '@/lib/types/template'
@@ -48,8 +46,6 @@ function BrandBadge({ brand }: { brand: BrandSlug }) {
 
 export default function MasterTemplatesClient() {
   const tableRef = useRef<HTMLDivElement>(null)
-  const qc = useQueryClient()
-
   const { data: templates = [], isLoading } = useQuery<MasterTemplate[]>({
     queryKey: ['master-templates-admin'],
     queryFn: async () => {
@@ -58,19 +54,6 @@ export default function MasterTemplatesClient() {
       return json.data
     },
     staleTime: 1000 * 60 * 5,
-  })
-
-  const deactivateMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await apiFetch(`/api/templates/master/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed')
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['master-templates-admin'] })
-      qc.invalidateQueries({ queryKey: ['master-templates'] })
-      toast.success('Master template deactivated')
-    },
-    onError: () => toast.error('Failed to deactivate'),
   })
 
   useGSAP(
@@ -151,23 +134,6 @@ export default function MasterTemplatesClient() {
                     <p className="text-[10px] text-muted-foreground font-mono mt-1.5 truncate">{t.slug}</p>
                   </div>
 
-                  {t.isActive && (
-                    <div className="pt-2 border-t">
-                      <button
-                        onClick={() => {
-                          if (confirm(`Deactivate "${t.name}"? Users won't be able to clone it.`)) {
-                            deactivateMutation.mutate(t.id)
-                          }
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md
-                                   border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30
-                                   transition-colors text-muted-foreground cursor-pointer w-full justify-center"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Deactivate
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             )

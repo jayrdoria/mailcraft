@@ -8,7 +8,7 @@ import type {
 } from '@/lib/types/template'
 import { LANGUAGES } from '@/lib/types/template'
 import { readTemplateHtml, writeTemplateHtml } from '@/lib/services/fileService'
-import { disableSection, deleteSection } from '@/lib/services/sectionService'
+import { deleteSection } from '@/lib/services/sectionService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { renderBodyParagraphs } from '@/lib/paragraphRenderer'
 
@@ -25,8 +25,6 @@ export function buildSectionTransformer(
     for (const section of sectionConfig) {
       if (section.isDeleted) {
         result = deleteSection(result, section.name)
-      } else if (!section.isActive) {
-        result = disableSection(result, section.name)
       }
     }
     return result

@@ -58,6 +58,16 @@ export async function deleteTemplateDir(baseFilePath: string): Promise<void> {
     throw new Error('Path traversal attempt detected')
   }
   await fs.rm(resolved, { recursive: true, force: true })
+
+  // Remove parent user folder if it's now empty
+  const userDir = path.dirname(resolved)
+  if (userDir !== resolvedBase && userDir.startsWith(resolvedBase)) {
+    try {
+      await fs.rmdir(userDir)
+    } catch {
+      // Not empty or doesn't exist — leave it
+    }
+  }
 }
 
 // ─────────────────────────────────────────────

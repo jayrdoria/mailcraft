@@ -22,7 +22,8 @@ const SECTION_DESCRIPTIONS: Record<string, string> = {
   BODY: 'Greeting, body paragraphs, and CTA button',
   USERNAME_PASSWORD: 'Username display and forgot password link',
   THUMBNAILS: 'Promotional thumbnail images and labels',
-  FOOTER: 'Terms & conditions and compliance footer',
+  TERMS: 'Campaign-specific terms and conditions',
+  LEGAL: 'Responsible gambling text and copyright',
 }
 import SetupModal from './SetupModal'
 import FieldEditor from './FieldEditor'
@@ -238,6 +239,7 @@ export default function EditorClient({
       name: s.name,
       label: s.label,
       isActive: activeSections.includes(s.name),
+      isDeleted: deletedSections.includes(s.name),
     }))
 
     if (!currentSavedId && !savedTemplateId) {
@@ -270,6 +272,7 @@ export default function EditorClient({
         <SetupModal
           sections={allSections}
           initialActiveSections={activeSections}
+          initialDeletedSections={deletedSections}
           initialRequiredFields={useEditorStore.getState().requiredFields}
           onConfirm={handleSetupConfirm}
           onCancel={closeSetupModal}

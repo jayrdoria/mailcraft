@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -27,6 +27,7 @@
         .footer-icons-td { padding: 16px 20px 8px 20px !important; }
         .footer-legal-td { padding: 6px 20px 20px 20px !important; }
         .logo-td { padding: 16px 20px 10px 20px !important; }
+        .stars-td { padding: 14px 12px !important; white-space: normal !important; }
       }
     </style>
   </head>
@@ -56,7 +57,7 @@
                   <tr>
                     <td align="center" class="banner-td" style="padding: 0; background-color: #000000">
                       <a href="{{BANNER_LINK}}">
-                        <img src="{{BANNER_IMG}}" alt="Jackpot Club" width="560" style="display: block; width: 100%; max-width: 560px" />
+                        <img src="{{BANNER_IMG}}" alt="Stakes Casino" width="560" style="display: block; width: 100%; max-width: 560px" />
                       </a>
                     </td>
                   </tr>
@@ -64,7 +65,6 @@
                   <!-- SECTION:END:HEADER -->
 
                   <!-- SECTION:START:BODY -->
-
 
                   <!-- CONTENT -->
                   <tr>
@@ -88,18 +88,13 @@
                   </tr>
 
                   <!-- SECTION:END:BODY -->
-<!-- SECTION:START:USERNAME_PASSWORD -->
 
-                  <tr>
-                    <td align="center" style="padding: 0 48px 4px 48px; background-color: #000000;">
-                      <p style="margin: 0; font-family: Roboto, sans-serif; font-size: 14px; font-weight: 400; color: #888888; text-align: center; line-height: 1.5;">
-                        {{USERNAME_LABEL}}: {{customer.id}}
-                      </p>
-                    </td>
-                  </tr>
-
+                  <!-- SECTION:START:USERNAME_PASSWORD -->
                   <tr>
                     <td align="center" style="padding: 0 48px 12px 48px; background-color: #000000;">
+                      <p style="margin: 0; font-family: Roboto, sans-serif; font-size: 14px; font-weight: 400; color: #888888; text-align: center; line-height: 1.5; padding-bottom: 6px;">
+                        {{USERNAME_LABEL}}: {{customer.id}}
+                      </p>
                       <p style="margin: 0; font-family: Roboto, sans-serif; font-size: 14px; font-weight: 400; color: #888888; text-align: center; line-height: 1.5;">
                         {{FORGOT_LABEL}} <a href="{{FORGOT_LINK}}" target="_blank" style="color: #ef5e5e; font-weight: 700; text-decoration: underline;">{{FORGOT_CTA}}</a>
                       </p>
@@ -156,8 +151,8 @@
                   </tr>
                   <!-- SECTION:END:THUMBNAILS -->
 
-                  <!-- SECTION:START:FOOTER -->
 
+                  <!-- SECTION:START:TERMS -->
 
                   <!-- FOOTER DIVIDER -->
                   <tr>
@@ -166,16 +161,18 @@
                     </td>
                   </tr>
 
+                  <!-- TERMS -->
                   <tr>
-                    <td style="padding: 14px 36px 14px 36px; background-color: #000000; font-family: Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #888888; text-align: justify;">
+                    <td style="padding: 14px 36px 6px 36px; background-color: #000000; font-family: Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #888888; text-align: justify;">
                       {{TERMS_TEXT}}
                     </td>
                   </tr>
 
+                  <!-- SECTION:END:TERMS -->
 
-                  <!-- TERMS DIVIDER BOTTOM -->
+                  <!-- PAYMENT METHODS DIVIDER TOP -->
                   <tr>
-                    <td style="padding: 0; background-color: #000000; line-height: 0; font-size: 0;">
+                    <td style="padding: 16px 0 0 0; background-color: #000000; line-height: 0; font-size: 0;">
                       <div style="height: 1px; background-color: #888888; margin: 0 36px;"></div>
                     </td>
                   </tr>
@@ -183,9 +180,18 @@
                   <!-- PAYMENT METHODS -->
                   <tr>
                     <td align="center" style="padding: 12px 36px; background-color: #000000;">
-                      <img src="https://scdn.ntgm.rocks/image/stakes/auto/auto/Stakes%20Casino%20payment%20method.png" alt="Payment Methods" width="488" style="display: block; max-width: 100%;" />
+                      <img src="https://scdn.ntgm.rocks/image/stakes/auto/auto/Stakes%20Casino%20payment%20method.png" alt="Payment Methods" width="488" style="display: block; width: 100%; max-width: 488px; margin: 0 auto;" />
                     </td>
                   </tr>
+
+                  <!-- PAYMENT METHODS DIVIDER BOTTOM -->
+                  <tr>
+                    <td style="padding: 0; background-color: #000000; line-height: 0; font-size: 0;">
+                      <div style="height: 1px; background-color: #888888; margin: 0 36px;"></div>
+                    </td>
+                  </tr>
+
+                  <!-- SECTION:START:LEGAL -->
 
                   <!-- FOOTER LOGOS -->
                   <tr>
@@ -199,13 +205,41 @@
                     </td>
                   </tr>
 
+                  <!-- FOOTER LICENSE -->
+                  <tr>
+                    <td align="center" style="padding: 6px 36px 0 36px; background-color: #000000; font-family: Roboto, sans-serif; font-size: 14px; line-height: 1.7; color: #888888; text-align: center;">
+                      {{FOOTER_LICENSE}}
+                    </td>
+                  </tr>
+
                   <!-- FOOTER LEGAL -->
                   <tr>
-                    <td align="center" class="footer-legal-td" style="padding: 6px 36px 22px 36px; background-color: #000000; font-family: Roboto, sans-serif; font-size: 14px; line-height: 1.7; color: #888888; text-align: center;">
+                    <td align="center" class="footer-legal-td" style="padding: 24px 36px 0 36px; background-color: #000000; font-family: Roboto, sans-serif; font-size: 14px; line-height: 1.7; color: #888888; text-align: center;">
                       {{FOOTER_LEGAL}}
                     </td>
                   </tr>
-                  <!-- SECTION:END:FOOTER -->
+
+                  <!-- FOOTER UNSUBSCRIBE -->
+                  <tr>
+                    <td align="center" style="padding: 24px 36px 0 36px; background-color: #000000; font-family: Roboto, sans-serif; font-size: 14px; line-height: 1.7; color: #888888; text-align: center;">
+                      <span style="color: #888888">If you wish to stop receiving promotional emails, you can <a href="{% unsubscribe_url %}" style="color: #888888; text-decoration: underline">unsubscribe</a>.</span>
+                    </td>
+                  </tr>
+
+                  <!-- FOOTER COPYRIGHT -->
+                  <tr>
+                    <td align="center" style="padding: 24px 36px 0 36px; background-color: #000000; font-family: Roboto, sans-serif; font-size: 14px; line-height: 1.7; color: #888888; text-align: center;">
+                      {{FOOTER_COPYRIGHT}}
+                    </td>
+                  </tr>
+
+                  <!-- FOOTER BRAND LOGO -->
+                  <tr>
+                    <td align="center" style="padding: 24px 36px 22px 36px; background-color: #000000;">
+                      <img src="https://scdn.ntgm.rocks/image/stakes/auto/auto/stakes-logo.png" alt="Stakes" width="50" style="display: inline-block; max-width: 100px" />
+                    </td>
+                  </tr>
+                  <!-- SECTION:END:LEGAL -->
 
                 </tbody>
               </table>

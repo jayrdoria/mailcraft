@@ -16,6 +16,7 @@ export interface SectionDef {
 interface SetupModalProps {
   sections: SectionDef[]
   initialActiveSections: string[]
+  initialDeletedSections: string[]
   initialRequiredFields: string[]
   onConfirm: (config: SetupConfig) => void
   onCancel: () => void
@@ -24,6 +25,7 @@ interface SetupModalProps {
 export default function SetupModal({
   sections,
   initialActiveSections,
+  initialDeletedSections,
   initialRequiredFields,
   onConfirm,
   onCancel,
@@ -35,7 +37,7 @@ export default function SetupModal({
     new Set(initialActiveSections.length > 0 ? initialActiveSections : sections.map((s) => s.name))
   )
   const [requiredFields] = useState<string[]>(initialRequiredFields)
-  const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set())
+  const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set(initialDeletedSections))
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   useGSAP(
@@ -141,7 +143,7 @@ export default function SetupModal({
                     )}
                     {!isActive && (
                       <p className="text-[11px] text-muted-foreground mt-0.5 italic">
-                        (Section will be hidden in email)
+                        (Fields locked — section still appears in email)
                       </p>
                     )}
                   </div>
@@ -204,7 +206,7 @@ export default function SetupModal({
           <div className="flex gap-2 px-3 py-2.5 rounded-md bg-muted/50 text-[11px] text-muted-foreground">
             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span>
-              Responsible gaming logos and footer legal text are managed by your admin and always included when the Footer section is on.
+              Brand logo and responsible gaming logos are managed by your admin. The Legal section contains pre-filled text you can update per campaign.
             </span>
           </div>
         </div>

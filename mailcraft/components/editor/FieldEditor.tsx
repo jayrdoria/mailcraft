@@ -34,6 +34,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const setActiveLanguage = useEditorStore((s) => s.setActiveLanguage)
   const fieldValues = useEditorStore((s) => s.fieldValues)
   const activeSections = useEditorStore((s) => s.activeSections)
+  const deletedSections = useEditorStore((s) => s.deletedSections)
   const masterPreviewHtml = useEditorStore((s) => s.masterPreviewHtml)
   const setFieldValue = useEditorStore((s) => s.setFieldValue)
   const setRenderedHtml = useEditorStore((s) => s.setRenderedHtml)
@@ -41,10 +42,11 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const supportedLanguages = useEditorStore((s) => s.supportedLanguages)
   const brand = useEditorStore((s) => s.brand)
 
-  // Build current section config from active sections
+  // Build current section config from store state (not prop alone, so deletedSections is always fresh)
   const currentSectionConfig: SavedSectionConfig[] = sectionConfig.map((s) => ({
     ...s,
     isActive: activeSections.includes(s.name),
+    isDeleted: deletedSections.includes(s.name),
   }))
 
   // Debounced preview update
@@ -61,7 +63,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   useEffect(() => {
     updatePreview(masterPreviewHtml, currentLangValues, currentSectionConfig, brand)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterPreviewHtml, fieldValues, activeSections, activeLanguage])
+  }, [masterPreviewHtml, fieldValues, activeSections, deletedSections, activeLanguage])
 
   // Fields grouped by section
   const fieldsBySectionName = editableFields.reduce<Record<string, TemplateFieldConfig[]>>(
@@ -102,9 +104,12 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
               ? null
               : sectionName
 
+          const normalizedName = normalizeGroup(sectionName)
+          if (sectionName !== '__default__' && deletedSections.includes(normalizedName)) return null
+
           const isSectionActive =
             sectionName === '__default__' ||
-            activeSections.includes(normalizeGroup(sectionName))
+            activeSections.includes(normalizedName)
 
           return (
             <div key={sectionName} className={cn(!isSectionActive && 'opacity-50 pointer-events-none')}>

@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import Redis from 'ioredis'
 
 const prisma = new PrismaClient()
+const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379')
 
 async function main() {
   console.log('Seeding database...')
@@ -58,20 +60,9 @@ async function main() {
 
   const templateBaseDir = process.env.TEMPLATE_BASE_DIR ?? './data/templates'
 
-  // ── Remove old templates ───────────────────────────────────────────────────
-  await prisma.masterTemplate.deleteMany({
-    where: {
-      slug: {
-        in: [
-          'stakes-email-verification',
-          'x7-email-verification',
-          'stakes-jackpot-club',
-          'stakes-casino-jackpot-club',
-          'x7-jackpot-club',
-        ],
-      },
-    },
-  })
+  // ── Clean slate — wipe all saved & master templates ───────────────────────
+  await prisma.savedTemplate.deleteMany({})
+  await prisma.masterTemplate.deleteMany({})
   console.log('✓ Cleaned up old templates')
 
   // ── Shared domain defaults ─────────────────────────────────────────────────
@@ -92,26 +83,46 @@ async function main() {
     es: 'https://x7casino.com/',
   }
 
-  // ── Footer legal text per language (plain text — users paste/edit directly) ─
-  const stakesFooterLegalByLang = {
-    en:   'Gambling can be addictive, please Play Responsibly. For help visit our Responsible Gambling page. Underage gambling is an offence. 18+<br><br>Copyright ©2026 Stakes Casino.',
-    fr:   "Les jeux d'argent peuvent créer une dépendance. Veuillez jouer de manière responsable. Pour obtenir de l'aide, consultez notre page Jeu Responsable. Les jeux d'argent pour les mineurs constituent une infraction. 18+<br><br>Copyright ©2026 Stakes Casino.",
-    frca: "Les jeux d'argent peuvent créer une dépendance. Veuillez jouer de manière responsable. Pour obtenir de l'aide, consultez notre page Jeu Responsable. Les jeux d'argent pour les mineurs constituent une infraction. 18+<br><br>Copyright ©2026 Stakes Casino.",
-    de:   'Glücksspiel kann süchtig machen. Bitte spielen Sie verantwortungsbewusst. Hilfe finden Sie auf unserer Seite Verantwortungsvolles Spielen. Glücksspiel durch Minderjährige ist strafbar. 18+<br><br>Copyright ©2026 Stakes Casino.',
-    it:   "Il gioco d'azzardo può creare dipendenza. Si prega di giocare responsabilmente. Per assistenza visita la nostra pagina Gioco Responsabile. Il gioco d'azzardo da parte di minorenni è un reato. 18+<br><br>Copyright ©2026 Stakes Casino.",
-    es:   'El juego puede crear adicción. Por favor, juega de forma responsable. Para obtener ayuda visita nuestra página de Juego Responsable. El juego de menores es un delito. 18+<br><br>Copyright ©2026 Stakes Casino.',
+  // ── Footer field defaults — each field is plain text, no HTML codes needed ──
+  const stakesRespGamblingByLang = {
+    en:   'Gambling can be addictive, please Play Responsibly. For help visit our <a href="https://stakes.com/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Responsible Gambling</a> page. Underage gambling is an offence. 18+',
+    fr:   'Les jeux d\'argent peuvent créer une dépendance. Veuillez jouer de manière responsable. Pour obtenir de l\'aide, consultez notre page <a href="https://stakes3.com/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Jeu Responsable</a>. Les jeux d\'argent pour les mineurs constituent une infraction. 18+',
+    frca: 'Les jeux d\'argent peuvent créer une dépendance. Veuillez jouer de manière responsable. Pour obtenir de l\'aide, consultez notre page <a href="https://stakes.com/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Jeu Responsable</a>. Les jeux d\'argent pour les mineurs constituent une infraction. 18+',
+    de:   'Glücksspiel kann süchtig machen. Bitte spielen Sie verantwortungsbewusst. Hilfe finden Sie auf unserer Seite <a href="https://stakes.com/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Verantwortungsvolles Spielen</a>. Glücksspiel durch Minderjährige ist strafbar. 18+',
+    it:   'Il gioco d\'azzardo può creare dipendenza. Si prega di giocare responsabilmente. Per assistenza visita la nostra pagina <a href="https://stakes3.com/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Gioco Responsabile</a>. Il gioco d\'azzardo da parte di minorenni è un reato. 18+',
+    es:   'El juego puede crear adicción. Por favor, juega de forma responsable. Para obtener ayuda visita nuestra página de <a href="https://stakes.com/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Juego Responsable</a>. El juego de menores es un delito. 18+',
   }
 
-  const stakesCasinoFooterLegalByLang = {
-    en: 'Gambling can be addictive, please Play Responsibly. For help visit our Responsible Gambling page. Underage gambling is an offence. 18+<br><br>Copyright ©2026 Stakes Casino.',
+  const scLicenseByLang = {
+    en: 'This website is licensed under Boni Tech Limited, a company incorporated under the laws of Saint Lucia with registration number 2023-00614 and registered address in Saint Lucia. Boni Tech Limited is licensed and regulated in Tobique First Nation by the Tobique Gaming Commission, with license number 0000018 issued on 16/08/2024.',
   }
 
-  const x7FooterLegalByLang = {
-    en: 'This website is licensed under Starscream Limited, a company incorporated under the laws of Saint Lucia with registration number 2023-00007. Licensed and regulated under Client Provider Authorization No. 00952 issued July 2023 by the Kahnawake Gaming Commission.<br><br>Gambling can be addictive, please Play Responsibly. For help visit our Responsible Gambling page. Underage gambling is an offence. 18+<br><br>©2026 X7Casino, All Rights Reserved.',
-    fr:  "Ce site est exploité par Starscream Limited, société immatriculée à Saint-Lucie sous le n° 2023-00007. Licenciée et réglementée en vertu de l'Autorisation n° 00952 délivrée en juillet 2023 par la Commission des jeux de Kahnawake.<br><br>Les jeux d'argent peuvent créer une dépendance. Veuillez jouer de manière responsable. Pour obtenir de l'aide, consultez notre page Jeu Responsable. Les jeux d'argent pour les mineurs constituent une infraction. 18+<br><br>©2026 X7Casino, Tous droits réservés.",
-    de:  'Diese Website wird von Starscream Limited betrieben, einem in Saint Lucia eingetragenen Unternehmen (Nr. 2023-00007). Lizenziert und reguliert gemäß der Client Provider Authorization Nr. 00952, ausgestellt im Juli 2023 von der Kahnawake Gaming Commission.<br><br>Glücksspiel kann süchtig machen. Bitte spielen Sie verantwortungsbewusst. Hilfe finden Sie auf unserer Seite Verantwortungsvolles Spielen. Glücksspiel durch Minderjährige ist strafbar. 18+<br><br>©2026 X7Casino, Alle Rechte vorbehalten.',
-    it:  "Questo sito è gestito da Starscream Limited, società costituita ai sensi delle leggi di Saint Lucia con numero di registrazione 2023-00007. Autorizzata e regolamentata in virtù dell'Autorizzazione n. 00952 rilasciata nel luglio 2023 dalla Kahnawake Gaming Commission.<br><br>Il gioco d'azzardo può creare dipendenza. Si prega di giocare responsabilmente. Per assistenza visita la nostra pagina Gioco Responsabile. Il gioco d'azzardo da parte di minorenni è un reato. 18+<br><br>©2026 X7Casino, Tutti i diritti riservati.",
-    es:  'Este sitio está operado por Starscream Limited, empresa constituida bajo las leyes de Santa Lucía con número de registro 2023-00007. Licenciada y regulada en virtud de la Autorización n.° 00952 emitida en julio de 2023 por la Kahnawake Gaming Commission.<br><br>El juego puede crear adicción. Por favor, juega de forma responsable. Para obtener ayuda visita nuestra página de Juego Responsable. El juego de menores es un delito. 18+<br><br>©2026 X7Casino, Todos los derechos reservados.',
+  const scRespGamblingByLang = {
+    en: 'Gambling can be addictive, please Play Responsibly. For help visit our <a href="https://stakescasino.com/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Responsible Gambling</a> page. Underage gambling is an offence. 18+',
+  }
+
+  const x7LicenseByLang = {
+    en: 'This website is licensed under Starscream Limited, a company incorporated under the laws of Saint Lucia with registration number 2023-00007 and registered address in Saint Lucia. Starscream Limited is licensed and regulated in virtue of a Client Provider Authorization numbered 00952 issued on July 2023 by the Kahnawake Gaming Commission.',
+    fr: 'Ce site est exploité par Starscream Limited, société immatriculée à Saint-Lucie sous le n° 2023-00007. Licenciée et réglementée en vertu de l\'Autorisation n° 00952 délivrée en juillet 2023 par la Commission des jeux de Kahnawake.',
+    de: 'Diese Website wird von Starscream Limited betrieben, einem in Saint Lucia eingetragenen Unternehmen (Nr. 2023-00007). Lizenziert und reguliert gemäß der Client Provider Authorization Nr. 00952, ausgestellt im Juli 2023 von der Kahnawake Gaming Commission.',
+    it: 'Questo sito è gestito da Starscream Limited, società costituita ai sensi delle leggi di Saint Lucia con numero di registrazione 2023-00007. Autorizzata e regolamentata in virtù dell\'Autorizzazione n. 00952 rilasciata nel luglio 2023 dalla Kahnawake Gaming Commission.',
+    es: 'Este sitio está operado por Starscream Limited, empresa constituida bajo las leyes de Santa Lucía con número de registro 2023-00007. Licenciada y regulada en virtud de la Autorización n.° 00952 emitida en julio de 2023 por la Kahnawake Gaming Commission.',
+  }
+
+  const x7RespGamblingByLang = {
+    en: 'Gambling can be addictive, please Play Responsibly. For help visit our <a href="https://x7casino.com/en/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Responsible Gambling</a> page. Underage gambling is an offence. 18+',
+    fr: 'Les jeux d\'argent peuvent créer une dépendance. Veuillez jouer de manière responsable. Pour obtenir de l\'aide, consultez notre page <a href="https://x7casino.com/fr/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Jeu Responsable</a>. Les jeux d\'argent pour les mineurs constituent une infraction. 18+',
+    de: 'Glücksspiel kann süchtig machen. Bitte spielen Sie verantwortungsbewusst. Hilfe finden Sie auf unserer Seite <a href="https://x7casino2.com/de/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Verantwortungsvolles Spielen</a>. Glücksspiel durch Minderjährige ist strafbar. 18+',
+    it: 'Il gioco d\'azzardo può creare dipendenza. Si prega di giocare responsabilmente. Per assistenza visita la nostra pagina <a href="https://x7casino.com/it/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Gioco Responsabile</a>. Il gioco d\'azzardo da parte di minorenni è un reato. 18+',
+    es: 'El juego puede crear adicción. Por favor, juega de forma responsable. Para obtener ayuda visita nuestra página de <a href="https://x7casino.com/es/responsible-gaming" target="_blank" style="color: #888888; font-weight: 700; text-decoration: underline;">Juego Responsable</a>. El juego de menores es un delito. 18+',
+  }
+
+  const x7CopyrightByLang = {
+    en: '©2026 X7Casino, All Rights Reserved.',
+    fr: '©2026 X7Casino, Tous droits réservés.',
+    de: '©2026 X7Casino, Alle Rechte vorbehalten.',
+    it: '©2026 X7Casino, Tutti i diritti riservati.',
+    es: '©2026 X7Casino, Todos los derechos reservados.',
   }
 
   // ── Stakes — Template ──────────────────────────────────────────────────────
@@ -251,9 +262,9 @@ async function main() {
       },
     },
 
-    // Footer
+    // Terms (separate Configure section)
     {
-      key: 'TERMS_TEXT', label: 'Terms & Conditions', type: 'richtext', group: 'Footer',
+      key: 'TERMS_TEXT', label: 'Terms & Conditions', type: 'richtext', group: 'Terms',
       defaultValues: {
         en:   'Valid on first deposit only | Minimum deposit: €10 or equivalent | Get 200% up to €500 | Wagering: 40x | Standard Stakes terms apply',
         fr:   "Valable sur le premier dépôt uniquement | Dépôt minimum : 10 € ou équivalent | Obtenez 200 % jusqu'à 500 € | Mise : 40x | Conditions générales Stakes applicables",
@@ -263,9 +274,15 @@ async function main() {
         es:   'Válido solo en el primer depósito | Depósito mínimo: 10 € o equivalente | Obtén el 200% hasta 500 € | Apuesta: 40x | Se aplican los términos estándar de Stakes',
       },
     },
+
+    // Legal (separate Configure section)
     {
-      key: 'FOOTER_LEGAL', label: 'Footer Legal Text', type: 'richtext', group: 'Footer',
-      defaultValues: stakesFooterLegalByLang,
+      key: 'FOOTER_LEGAL', label: 'Responsible Gambling Text', type: 'richtext', group: 'Legal',
+      defaultValues: stakesRespGamblingByLang,
+    },
+    {
+      key: 'FOOTER_COPYRIGHT', label: 'Copyright', type: 'text', group: 'Legal',
+      defaultValue: 'Copyright ©2026 Stakes Casino.',
     },
   ]
 
@@ -340,14 +357,24 @@ async function main() {
     { key: 'THUMB2_LINK',  label: 'Thumbnail 2 Link',  type: 'url',  group: 'Thumbnails', defaultValues: { en: 'https://www.stakescasino.com/promotions' } },
     { key: 'THUMB2_LABEL', label: 'Thumbnail 2 Label', type: 'text', group: 'Thumbnails', defaultValues: { en: '10000+ Games' } },
 
-    // Footer
+    // Terms (separate Configure section)
     {
-      key: 'TERMS_TEXT', label: 'Terms & Conditions', type: 'richtext', group: 'Footer',
+      key: 'TERMS_TEXT', label: 'Terms & Conditions', type: 'richtext', group: 'Terms',
       defaultValues: { en: 'Valid on first deposit only | Minimum deposit: €10 or equivalent | Get 200% up to €500 + 100 Spins | Wagering: 40x bonus | Standard Stakes Casino terms apply' },
     },
+
+    // Legal (separate Configure section)
     {
-      key: 'FOOTER_LEGAL', label: 'Footer Legal Text', type: 'richtext', group: 'Footer',
-      defaultValues: stakesCasinoFooterLegalByLang,
+      key: 'FOOTER_LICENSE', label: 'License Text', type: 'richtext', group: 'Legal',
+      defaultValues: scLicenseByLang,
+    },
+    {
+      key: 'FOOTER_LEGAL', label: 'Responsible Gambling Text', type: 'richtext', group: 'Legal',
+      defaultValues: scRespGamblingByLang,
+    },
+    {
+      key: 'FOOTER_COPYRIGHT', label: 'Copyright', type: 'text', group: 'Legal',
+      defaultValue: 'Copyright ©2026 Stakes Casino.',
     },
   ]
 
@@ -526,9 +553,9 @@ async function main() {
       },
     },
 
-    // Footer
+    // Terms (separate Configure section)
     {
-      key: 'TERMS_TEXT', label: 'Terms & Conditions', type: 'richtext', group: 'Footer',
+      key: 'TERMS_TEXT', label: 'Terms & Conditions', type: 'richtext', group: 'Terms',
       defaultValues: {
         en: 'Jackpot available to opted-in players only | Opt-in required and remains active until manually disabled | 4 Jackpot tiers: Mini, Minor, Major, Royale | Available on selected Slot & Live Casino games | Jackpot bet is an additional cost per round and independent of base game results | Contribution levels may apply where available | Players can opt-out anytime | Full terms available within participating games',
         fr: "Jackpot réservé aux joueurs ayant activé l'option | Activation requise, reste active jusqu'à désactivation manuelle | 4 niveaux : Mini, Minor, Major, Royale | Disponible sur certains jeux de machines à sous et casino en direct | Mise jackpot = coût supplémentaire par tour, indépendant du jeu de base | Niveaux de contribution selon les jeux | Désinscription possible à tout moment | Conditions complètes disponibles dans les jeux participants",
@@ -537,9 +564,19 @@ async function main() {
         es: "Jackpot disponible solo para jugadores que hayan optado | Activación obligatoria, permanece activa hasta desactivación manual | 4 niveles: Mini, Minor, Major, Royale | Disponible en juegos de Slot y Casino en Vivo seleccionados | La apuesta del jackpot es un coste adicional por ronda, independiente del juego base | Niveles de contribución aplicables | Cancelación posible en cualquier momento | Condiciones completas disponibles en los juegos participantes",
       },
     },
+
+    // Legal (separate Configure section)
     {
-      key: 'FOOTER_LEGAL', label: 'Footer Legal Text', type: 'richtext', group: 'Footer',
-      defaultValues: x7FooterLegalByLang,
+      key: 'FOOTER_LICENSE', label: 'License Text', type: 'richtext', group: 'Legal',
+      defaultValues: x7LicenseByLang,
+    },
+    {
+      key: 'FOOTER_LEGAL', label: 'Responsible Gambling Text', type: 'richtext', group: 'Legal',
+      defaultValues: x7RespGamblingByLang,
+    },
+    {
+      key: 'FOOTER_COPYRIGHT', label: 'Copyright', type: 'text', group: 'Legal',
+      defaultValues: x7CopyrightByLang,
     },
   ]
 
@@ -571,6 +608,13 @@ async function main() {
   })
   console.log(`✓ X7 Casino Template: ${x7JC.id}`)
 
+  // Flush all mailcraft Redis caches so stale IDs never survive a reseed
+  const keys = await redis.keys('mailcraft:*')
+  if (keys.length) {
+    for (const k of keys) await redis.del(k)
+    console.log(`✓ Cleared ${keys.length} Redis cache key(s)`)
+  }
+
   console.log('\n✅ Seed complete.')
 }
 
@@ -581,4 +625,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect()
+    await redis.quit()
   })

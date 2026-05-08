@@ -118,8 +118,9 @@ function DownloadButton({
 }
 
 export default function ExportButtons({ savedTemplateId, templateName }: ExportButtonsProps) {
-  const storeLanguage = useEditorStore((s) => s.activeLanguage)
-  const [activeLang, setActiveLang] = useState<Language>(storeLanguage)
+  const activeLang = useEditorStore((s) => s.activeLanguage)
+  const setActiveLang = useEditorStore((s) => s.setActiveLanguage)
+  const supportedLanguages = useEditorStore((s) => s.supportedLanguages)
 
   return (
     <div className="flex flex-col gap-2 p-4 border rounded-xl bg-card">
@@ -127,7 +128,7 @@ export default function ExportButtons({ savedTemplateId, templateName }: ExportB
         Export
       </p>
 
-      <LanguageSelector value={activeLang} onChange={setActiveLang} />
+      <LanguageSelector value={activeLang} onChange={setActiveLang} languages={supportedLanguages} />
 
       <CopyButton
         label="Copy Clean HTML"
