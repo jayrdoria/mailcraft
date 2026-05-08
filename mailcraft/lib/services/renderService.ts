@@ -11,6 +11,7 @@ import { readTemplateHtml, writeTemplateHtml } from '@/lib/services/fileService'
 import { deleteSection } from '@/lib/services/sectionService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { renderBodyParagraphs } from '@/lib/paragraphRenderer'
+import { escapeHtml, sanitizeUrl } from '@/lib/utils/escapeHtml'
 
 // ─────────────────────────────────────────────
 // Section config transformer
@@ -44,6 +45,38 @@ function injectTokens(html: string, tokens: Record<string, FieldValue>, brand = 
     const replacement = Array.isArray(value)
       ? renderBodyParagraphs(value, brand)
       : value
+    result = result.replace(new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g'), replacement)
+  }
+  return result
+}
+
+// ─────────────────────────────────────────────
+// Sanitized editable token injection (Pass 2 only)
+// Applies escapeHtml on text/richtext fields and sanitizeUrl on url/link fields.
+// Paragraphs (BodyParagraph[]) are rendered via paragraphRenderer as-is — they
+// contain intentional <strong> tags from the internal editor.
+// ─────────────────────────────────────────────
+
+function injectEditableTokens(
+  html: string,
+  tokens: Record<string, FieldValue>,
+  fieldConfigs: TemplateFieldConfig[],
+  brand = 'STAKES'
+): string {
+  const typeMap = new Map(fieldConfigs.map((f) => [f.key, f.type]))
+  let result = html
+  for (const [key, value] of Object.entries(tokens)) {
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    let replacement: string
+    if (Array.isArray(value)) {
+      replacement = renderBodyParagraphs(value, brand)
+    } else {
+      const fieldType = typeMap.get(key)
+      replacement =
+        fieldType === 'url' || fieldType === 'link'
+          ? sanitizeUrl(value)
+          : escapeHtml(value)
+    }
     result = result.replace(new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g'), replacement)
   }
   return result
@@ -103,7 +136,7 @@ export async function renderTemplate(params: {
   editableFields: TemplateFieldConfig[]
   fieldValues: MultiLanguageFieldValues
 }): Promise<string> {
-  const { masterTemplateId, baseFilePath, lang, brand, lockedFields, fieldValues } = params
+  const { masterTemplateId, baseFilePath, lang, brand, lockedFields, editableFields, fieldValues } = params
 
   const masterHtml = await getMasterHtml(masterTemplateId, baseFilePath, lang)
 
@@ -114,9 +147,9 @@ export async function renderTemplate(params: {
   }
   let html = injectTokens(masterHtml, lockedTokens)
 
-  // Pass 2: inject user's editable field values for this language
+  // Pass 2: inject user's editable field values for this language (sanitized by field type)
   const langValues = fieldValues[lang] ?? {}
-  html = injectTokens(html, langValues, brand)
+  html = injectEditableTokens(html, langValues, editableFields, brand)
 
   return html
 }
