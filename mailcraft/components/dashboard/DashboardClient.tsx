@@ -10,7 +10,7 @@ import { gsap } from '@/lib/gsap'
 import { toast } from 'sonner'
 import {
   Plus, Search, Trash2, Edit, Download, Share2, Eye,
-  Mail, Clock, Copy, MoreHorizontal, Files,
+  Mail, Clock, Copy, MoreHorizontal, Files, Archive,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BRAND_LABELS } from '@/lib/types/template'
@@ -37,7 +37,7 @@ interface SavedTemplate {
   name: string
   updatedAt: string
   previewImageUrl: string | null
-  masterTemplate: { id: string; name: string; brand: BrandSlug }
+  masterTemplate: { id: string; name: string; brand: BrandSlug; languages: string[] }
 }
 
 interface SharedTemplate {
@@ -83,20 +83,21 @@ function BrandBadge({ brand }: { brand: BrandSlug }) {
 
 /* ── Three-dot overflow menu ─────────────────────────── */
 interface TemplateMenuProps {
-  id: string
-  name: string
-  onCopyClean: () => void
-  onCopyFull: () => void
-  onDownload: () => void
+  languages: string[]
+  onCopyClean: (lang: string) => void
+  onCopyFull: (lang: string) => void
+  onDownload: (lang: string) => void
+  onDownloadZip: () => void
   onShare: () => void
   onDuplicate: () => void
   onDelete: () => void
 }
 
 function TemplateMenu({
-  onCopyClean, onCopyFull, onDownload, onShare, onDuplicate, onDelete,
+  languages, onCopyClean, onCopyFull, onDownload, onDownloadZip, onShare, onDuplicate, onDelete,
 }: TemplateMenuProps) {
   const [open, setOpen] = useState(false)
+  const [selectedLang, setSelectedLang] = useState(languages[0] ?? 'en')
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -110,10 +111,14 @@ function TemplateMenu({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
-  const items: { label: string; icon: React.ElementType; action: () => void; destructive?: boolean }[] = [
-    { label: 'Copy Clean HTML', icon: Copy, action: onCopyClean },
-    { label: 'Copy Full HTML', icon: Mail, action: onCopyFull },
-    { label: 'Download', icon: Download, action: onDownload },
+  const exportItems: { label: string; icon: React.ElementType; action: () => void }[] = [
+    { label: 'Copy Clean HTML', icon: Copy, action: () => onCopyClean(selectedLang) },
+    { label: 'Copy Full HTML', icon: Mail, action: () => onCopyFull(selectedLang) },
+    { label: 'Download', icon: Download, action: () => onDownload(selectedLang) },
+    { label: 'Download ZIP (All Languages)', icon: Archive, action: onDownloadZip },
+  ]
+
+  const managementItems: { label: string; icon: React.ElementType; action: () => void; destructive?: boolean }[] = [
     { label: 'Share', icon: Share2, action: onShare },
     { label: 'Duplicate', icon: Files, action: onDuplicate },
     { label: 'Delete', icon: Trash2, action: onDelete, destructive: true },
@@ -132,10 +137,39 @@ function TemplateMenu({
 
       {open && (
         <div
-          className="absolute right-0 top-7 z-50 min-w-[168px] rounded-lg border bg-popover
+          className="absolute right-0 top-7 z-50 min-w-[180px] rounded-lg border bg-popover
                      shadow-xl shadow-black/30 py-1 animate-in fade-in-0 zoom-in-95 duration-100"
         >
-          {items.map((item) => {
+          {languages.length > 1 && (
+            <div className="px-2 py-1.5 border-b mb-1">
+              <select
+                value={selectedLang}
+                onChange={(e) => setSelectedLang(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full h-6 text-xs rounded border bg-background text-foreground px-1 cursor-pointer"
+              >
+                {languages.map((lang) => (
+                  <option key={lang} value={lang}>{lang.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {exportItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <button
+                key={item.label}
+                onClick={() => { setOpen(false); item.action() }}
+                className="flex items-center gap-2.5 w-full px-3 py-1.5 text-xs text-left
+                           text-foreground hover:bg-accent transition-colors cursor-pointer"
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                {item.label}
+              </button>
+            )
+          })}
+          <div className="my-1 border-t" />
+          {managementItems.map((item) => {
             const Icon = item.icon
             return (
               <button
@@ -155,6 +189,97 @@ function TemplateMenu({
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ── Shared template card with per-card language state ── */
+interface SharedTemplateCardProps {
+  s: SharedTemplate
+  onCopyClean: (id: string, lang: string) => void
+}
+
+function SharedTemplateCard({ s, onCopyClean }: SharedTemplateCardProps) {
+  const langs = s.savedTemplate.masterTemplate.languages
+  const [selectedLang, setSelectedLang] = useState(langs[0] ?? 'en')
+
+  return (
+    <div
+      className="rounded-xl border bg-card flex flex-col
+                 hover:border-primary/30 transition-colors"
+    >
+      <div className="relative w-full bg-muted overflow-hidden rounded-t-xl" style={{ paddingBottom: '52%' }}>
+        {s.savedTemplate.previewImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={s.savedTemplate.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+        ) : (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
+            style={{
+              background:
+                s.savedTemplate.masterTemplate.brand === 'X7'
+                  ? 'linear-gradient(135deg, #0d0d0d 0%, #001a1e 100%)'
+                  : 'linear-gradient(135deg, #0d0d0d 0%, #1e0d0d 100%)',
+            }}
+          >
+            <Mail className="w-5 h-5 text-white/20" />
+            <span
+              className="text-[10px] font-semibold tracking-widest uppercase"
+              style={{
+                color: s.savedTemplate.masterTemplate.brand === 'X7' ? '#07d8f4' : '#ef5e5e',
+              }}
+            >
+              {BRAND_LABELS[s.savedTemplate.masterTemplate.brand]}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="p-4 flex flex-col gap-2 flex-1">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{s.savedTemplate.name}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <BrandBadge brand={s.savedTemplate.masterTemplate.brand} />
+            <span className="text-[11px] text-muted-foreground">
+              from {s.sharedBy.name}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Clock className="w-3 h-3" />
+          {formatDate(s.createdAt)}
+        </div>
+        <div className="flex gap-2 pt-2 border-t">
+          <Link
+            href={`/editor/${s.savedTemplate.id}`}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-md
+                       border hover:bg-accent transition-colors text-muted-foreground"
+          >
+            <Eye className="w-3 h-3" />
+            View
+          </Link>
+          <div className="flex-1 flex gap-1">
+            {langs.length > 1 && (
+              <select
+                value={selectedLang}
+                onChange={(e) => setSelectedLang(e.target.value)}
+                className="h-full text-xs rounded-md border bg-background text-foreground px-1 cursor-pointer"
+              >
+                {langs.map((lang) => (
+                  <option key={lang} value={lang}>{lang.toUpperCase()}</option>
+                ))}
+              </select>
+            )}
+            <button
+              onClick={() => onCopyClean(s.savedTemplate.id, selectedLang)}
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded-md
+                         bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
+            >
+              <Copy className="w-3 h-3" />
+              Copy Clean HTML
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -281,16 +406,37 @@ export default function DashboardClient({ userName }: DashboardClientProps) {
   }
 
   async function downloadClean(id: string, name: string, lang = 'en') {
-    const res = await apiFetch(`/api/templates/saved/${id}/clean?lang=${lang}`)
-    const html = await res.text()
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${name}-${lang}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Downloaded')
+    try {
+      const res = await apiFetch(`/api/templates/saved/${id}/clean?lang=${lang}`)
+      const html = await res.text()
+      const blob = new Blob([html], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${name}-${lang}.html`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Downloaded')
+    } catch {
+      toast.error('Download failed')
+    }
+  }
+
+  async function downloadZip(id: string, name: string) {
+    try {
+      const res = await apiFetch(`/api/templates/saved/${id}/zip`)
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${name}-all-languages.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('ZIP downloaded')
+    } catch {
+      toast.error('Download failed')
+    }
   }
 
   return (
@@ -430,11 +576,11 @@ export default function DashboardClient({ userName }: DashboardClientProps) {
                       </div>
                     </div>
                     <TemplateMenu
-                      id={t.id}
-                      name={t.name}
-                      onCopyClean={() => copyClean(t.id)}
-                      onCopyFull={() => copyFull(t.id)}
-                      onDownload={() => downloadClean(t.id, t.name)}
+                      languages={t.masterTemplate.languages}
+                      onCopyClean={(lang) => copyClean(t.id, lang)}
+                      onCopyFull={(lang) => copyFull(t.id, lang)}
+                      onDownload={(lang) => downloadClean(t.id, t.name, lang)}
+                      onDownloadZip={() => downloadZip(t.id, t.name)}
                       onShare={() => setShareTemplateId(t.id)}
                       onDuplicate={() => duplicateMutation.mutate(t.id)}
                       onDelete={() => {
@@ -473,71 +619,11 @@ export default function DashboardClient({ userName }: DashboardClientProps) {
           <h2 className="text-base font-semibold mb-4">Shared With Me</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {shared.map((s) => (
-              <div
+              <SharedTemplateCard
                 key={s.id}
-                className="rounded-xl border bg-card flex flex-col
-                           hover:border-primary/30 transition-colors"
-              >
-                <div className="relative w-full bg-muted overflow-hidden rounded-t-xl" style={{ paddingBottom: '52%' }}>
-                  {s.savedTemplate.previewImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.savedTemplate.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
-                  ) : (
-                    <div
-                      className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
-                      style={{
-                        background:
-                          s.savedTemplate.masterTemplate.brand === 'X7'
-                            ? 'linear-gradient(135deg, #0d0d0d 0%, #001a1e 100%)'
-                            : 'linear-gradient(135deg, #0d0d0d 0%, #1e0d0d 100%)',
-                      }}
-                    >
-                      <Mail className="w-5 h-5 text-white/20" />
-                      <span
-                        className="text-[10px] font-semibold tracking-widest uppercase"
-                        style={{
-                          color: s.savedTemplate.masterTemplate.brand === 'X7' ? '#07d8f4' : '#ef5e5e',
-                        }}
-                      >
-                        {BRAND_LABELS[s.savedTemplate.masterTemplate.brand]}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 flex flex-col gap-2 flex-1">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{s.savedTemplate.name}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <BrandBadge brand={s.savedTemplate.masterTemplate.brand} />
-                      <span className="text-[11px] text-muted-foreground">
-                        from {s.sharedBy.name}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    {formatDate(s.createdAt)}
-                  </div>
-                  <div className="flex gap-2 pt-2 border-t">
-                    <Link
-                      href={`/editor/${s.savedTemplate.id}`}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-md
-                                 border hover:bg-accent transition-colors text-muted-foreground"
-                    >
-                      <Eye className="w-3 h-3" />
-                      View
-                    </Link>
-                    <button
-                      onClick={() => copyClean(s.savedTemplate.id)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded-md
-                                 bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
-                    >
-                      <Copy className="w-3 h-3" />
-                      Copy Clean HTML
-                    </button>
-                  </div>
-                </div>
-              </div>
+                s={s}
+                onCopyClean={(id, lang) => copyClean(id, lang)}
+              />
             ))}
           </div>
         </section>

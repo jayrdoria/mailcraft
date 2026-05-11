@@ -22,7 +22,7 @@ export const GET = apiHandler(async () => {
     prisma.savedTemplate.findMany({
       where: { userId: session.user.id },
       include: {
-        masterTemplate: { select: { id: true, name: true, brand: true, slug: true, editableFields: true } },
+        masterTemplate: { select: { id: true, name: true, brand: true, slug: true, languages: true, editableFields: true } },
       },
       orderBy: { updatedAt: 'desc' },
     }),
@@ -31,7 +31,7 @@ export const GET = apiHandler(async () => {
       include: {
         savedTemplate: {
           include: {
-            masterTemplate: { select: { id: true, name: true, brand: true, slug: true, editableFields: true } },
+            masterTemplate: { select: { id: true, name: true, brand: true, slug: true, languages: true, editableFields: true } },
             user: { select: { id: true, name: true, department: true } },
           },
         },
