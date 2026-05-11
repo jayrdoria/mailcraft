@@ -36,12 +36,17 @@ export const GET = apiHandler(async (req, ctx) => {
 
   // Try cache
   const cacheKey = CacheKeys.masterTemplateHtml(id, lang)
-  let masterHtml = await redis.get(cacheKey)
+  let masterHtml: string | null = null
+  try {
+    masterHtml = await redis.get(cacheKey)
+  } catch {
+    // Redis unavailable — fall through to disk
+  }
 
   if (!masterHtml) {
     try {
       masterHtml = await readTemplateHtml(template.baseFilePath, lang)
-      await redis.set(cacheKey, masterHtml, 'EX', CacheTTL.masterTemplateHtml)
+      redis.set(cacheKey, masterHtml, 'EX', CacheTTL.masterTemplateHtml).catch(() => {})
     } catch {
       return apiError('Template HTML file not found', 404)
     }

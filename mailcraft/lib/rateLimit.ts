@@ -13,7 +13,12 @@ export async function rateLimit(
   limit: number,
   windowSeconds: number
 ): Promise<boolean> {
-  const count = await redis.incr(key)
-  if (count === 1) await redis.expire(key, windowSeconds)
-  return count > limit
+  try {
+    const count = await redis.incr(key)
+    if (count === 1) await redis.expire(key, windowSeconds)
+    return count > limit
+  } catch {
+    // Redis unavailable — fail open (allow request)
+    return false
+  }
 }
