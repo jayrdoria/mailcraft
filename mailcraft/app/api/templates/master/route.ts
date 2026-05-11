@@ -23,7 +23,12 @@ export const GET = apiHandler(async () => {
   if (!session) return apiError('Unauthorized', 401)
 
   // Try cache
-  const cached = await redis.get(CacheKeys.masterTemplateList)
+  let cached: string | null = null
+  try {
+    cached = await redis.get(CacheKeys.masterTemplateList)
+  } catch {
+    // Redis unavailable — fall through to DB
+  }
   if (cached) {
     const templates = JSON.parse(cached)
     // Strip lockedFields for non-admin
@@ -35,7 +40,7 @@ export const GET = apiHandler(async () => {
 
   const templates = await getMasterTemplates()
 
-  await redis.set(CacheKeys.masterTemplateList, JSON.stringify(templates), 'EX', CacheTTL.masterTemplateList)
+  redis.set(CacheKeys.masterTemplateList, JSON.stringify(templates), 'EX', CacheTTL.masterTemplateList).catch(() => {})
 
   if (session.user.role !== 'ADMIN') {
     return apiSuccess(templates.map((t) => ({ ...t, lockedFields: undefined })))

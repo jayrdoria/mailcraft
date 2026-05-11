@@ -26,10 +26,12 @@ function createRedisClient(): Redis {
       return Math.min(times * 200, 2000)
     },
     lazyConnect: true,
+    enableOfflineQueue: false,
+    family: 4,
   })
 
   client.on('error', (err) => {
-    console.error('[Redis] Connection error:', err)
+    console.error('[Redis] Connection error:', err.message)
   })
 
   return client
