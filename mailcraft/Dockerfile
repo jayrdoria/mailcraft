@@ -7,6 +7,11 @@ FROM base AS deps
 COPY package.json package-lock.json* ./
 RUN npm ci
 
+# ── Migrations + seed (full node_modules — all deps available) ──
+FROM deps AS migrator
+COPY prisma ./prisma
+CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+
 # ── Development stage (npm run dev, hot-reload via volume mount) ──
 FROM base AS dev
 COPY --from=deps /app/node_modules ./node_modules
@@ -39,12 +44,6 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Prisma schema + migrations + CLI needed for `prisma migrate deploy` and seed
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
 
 USER nextjs
 EXPOSE 7070
