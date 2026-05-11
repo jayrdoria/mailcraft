@@ -6,7 +6,18 @@ const globalForRedis = globalThis as unknown as {
 
 function createRedisClient(): Redis {
   const url = process.env.REDIS_URL
-  if (!url) throw new Error('REDIS_URL is not defined in environment variables')
+
+  if (!url) {
+    // During `next build`, NEXT_PHASE is set automatically — return a stub that never connects
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return new Redis('redis://localhost:6379', {
+        lazyConnect: true,
+        maxRetriesPerRequest: 0,
+        enableOfflineQueue: false,
+      })
+    }
+    throw new Error('REDIS_URL is not defined in environment variables')
+  }
 
   const client = new Redis(url, {
     maxRetriesPerRequest: 3,
@@ -21,16 +32,17 @@ function createRedisClient(): Redis {
     console.error('[Redis] Connection error:', err)
   })
 
-  if (process.env.NODE_ENV !== 'production') globalForRedis.redis = client
-
   return client
 }
 
 function getRedisClient(): Redis {
-  return globalForRedis.redis ?? createRedisClient()
+  if (!globalForRedis.redis) {
+    globalForRedis.redis = createRedisClient()
+  }
+  return globalForRedis.redis
 }
 
-// Proxy defers initialization to first use (request time, not build time)
+// Proxy defers init to first property access (request time, not build/import time)
 export const redis = new Proxy({} as Redis, {
   get(_, prop, receiver) {
     return Reflect.get(getRedisClient(), prop, receiver)
