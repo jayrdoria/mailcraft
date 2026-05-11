@@ -157,10 +157,14 @@ export default function Sidebar({ role, name, email }: SidebarProps) {
 
         {/* User + Logout */}
         <div className="border-t px-3 py-3">
-          <div className="mb-2 px-1">
+          <Link
+            href="/account"
+            onClick={closeOnMobile}
+            className="flex flex-col mb-2 px-1 py-1 rounded-md hover:bg-accent transition-colors"
+          >
             <p className="text-xs font-medium text-foreground truncate">{name}</p>
             <p className="text-[11px] text-muted-foreground truncate">{email}</p>
-          </div>
+          </Link>
           <form action={logoutAction}>
             <button
               type="submit"

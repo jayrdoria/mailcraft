@@ -124,7 +124,13 @@ export const updateUserSchema = z.object({
   name:            z.string().min(1).max(100).optional(),
   email:           z.string().email().optional(),
   department:      z.string().min(1).max(50).optional(),
+  role:            z.enum(['ADMIN', 'DEPARTMENT']).optional(),
   isActive:        z.boolean().optional(),
   canAccessEmails: z.boolean().optional(),
   password:        z.string().min(8).optional(),
+})
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword:     z.string().min(8),
 })

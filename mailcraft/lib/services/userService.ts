@@ -65,6 +65,7 @@ export async function updateUser(
   data: Partial<{
     name: string
     email: string
+    role: 'ADMIN' | 'DEPARTMENT'
     isActive: boolean
     canAccessEmails: boolean
     department: string
