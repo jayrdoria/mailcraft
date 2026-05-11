@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   assetPrefix: '/mailcraft',
   output: 'standalone',
   devIndicators: false,
+  env: {
+    NEXT_PUBLIC_BASE_PATH: '/mailcraft',
+  },
   images: {
     remotePatterns: [
       {
