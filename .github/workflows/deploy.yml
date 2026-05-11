@@ -1,0 +1,59 @@
+name: Deploy MailCraft
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mailcraft
+          file: ./mailcraft/Dockerfile
+          target: runner
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mailcraft:latest
+            ghcr.io/${{ github.repository_owner }}/mailcraft:${{ github.sha }}
+
+  deploy:
+    name: Deploy to VPS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GHCR_TOKEN
+          script: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u jayrdoria --password-stdin
+            cd /home/admin/web/employee.netovation.eu/public_html/mailcraft/mailcraft
+            git pull
+            docker compose -f docker-compose.prod.yml pull app
+            docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml up -d --no-deps app
+            docker image prune -f
+            echo "MailCraft deployed at employee.netovation.eu/mailcraft"
