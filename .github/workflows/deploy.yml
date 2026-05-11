@@ -53,7 +53,7 @@ jobs:
             cd /home/admin/web/employee.netovation.eu/public_html/mailcraft/mailcraft
             git pull
             docker compose -f docker-compose.prod.yml pull app
-            docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml run --rm app node node_modules/prisma/bin/prisma.js migrate deploy
             docker compose -f docker-compose.prod.yml up -d --no-deps app
             docker image prune -f
             echo "MailCraft deployed at employee.netovation.eu/mailcraft"
