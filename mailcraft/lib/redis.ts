@@ -21,12 +21,21 @@ function createRedisClient(): Redis {
     console.error('[Redis] Connection error:', err)
   })
 
+  if (process.env.NODE_ENV !== 'production') globalForRedis.redis = client
+
   return client
 }
 
-export const redis = globalForRedis.redis ?? createRedisClient()
+function getRedisClient(): Redis {
+  return globalForRedis.redis ?? createRedisClient()
+}
 
-if (process.env.NODE_ENV !== 'production') globalForRedis.redis = redis
+// Proxy defers initialization to first use (request time, not build time)
+export const redis = new Proxy({} as Redis, {
+  get(_, prop, receiver) {
+    return Reflect.get(getRedisClient(), prop, receiver)
+  },
+})
 
 // Cache keys
 export const CacheKeys = {
