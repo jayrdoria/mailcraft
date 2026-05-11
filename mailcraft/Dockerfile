@@ -10,6 +10,7 @@ RUN npm ci
 # ── Migrations + seed (full node_modules — all deps available) ──
 FROM deps AS migrator
 COPY prisma ./prisma
+RUN npx prisma generate
 CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
 # ── Development stage (npm run dev, hot-reload via volume mount) ──

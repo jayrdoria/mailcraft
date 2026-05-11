@@ -32,6 +32,8 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/mailcraft:latest
             ghcr.io/${{ github.repository_owner }}/mailcraft:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/mailcraft:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/mailcraft:cache,mode=max
 
       - name: Build and push migrator image
         uses: docker/build-push-action@v5
@@ -41,6 +43,8 @@ jobs:
           target: migrator
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/mailcraft:migrate
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/mailcraft:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/mailcraft:cache,mode=max
 
   deploy:
     name: Deploy to VPS
