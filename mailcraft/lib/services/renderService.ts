@@ -93,11 +93,15 @@ async function getMasterHtml(
 ): Promise<string> {
   const cacheKey = CacheKeys.masterTemplateHtml(masterTemplateId, lang)
 
-  const cached = await redis.get(cacheKey)
-  if (cached) return cached
+  try {
+    const cached = await redis.get(cacheKey)
+    if (cached) return cached
+  } catch {
+    // Redis unavailable — fall through to disk
+  }
 
   const html = await readTemplateHtml(baseFilePath, lang)
-  await redis.set(cacheKey, html, 'EX', CacheTTL.masterTemplateHtml)
+  redis.set(cacheKey, html, 'EX', CacheTTL.masterTemplateHtml).catch(() => {})
   return html
 }
 
@@ -110,9 +114,9 @@ export async function invalidateMasterTemplateCache(
   masterTemplateId: string,
   languages: Language[] = LANGUAGES
 ): Promise<void> {
-  await Promise.all(
+  await Promise.allSettled(
     languages.map((lang) =>
-      redis.del(CacheKeys.masterTemplateHtml(masterTemplateId, lang))
+      redis.del(CacheKeys.masterTemplateHtml(masterTemplateId, lang)).catch(() => {})
     )
   )
 }
