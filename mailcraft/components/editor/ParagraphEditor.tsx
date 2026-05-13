@@ -1,120 +1,72 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { Bold, Plus, Trash2 } from 'lucide-react'
+import { useRef } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
+import { Bold, Italic, Underline as UnderlineIcon, List } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { BodyParagraph } from '@/lib/types/template'
 
-function normalizeBold(html: string): string {
-  let result = html
-  result = result.replace(/<b\b[^>]*>/gi, '<strong style="font-weight:700">')
-  result = result.replace(/<\/b>/gi, '</strong>')
-  result = result.replace(/<strong\b[^>]*>/gi, '<strong style="font-weight:700">')
+function paragraphsToHtml(paragraphs: BodyParagraph[]): string {
+  if (!paragraphs.length) return '<p></p>'
+  return paragraphs
+    .map((p) => {
+      const html = p.html.trim()
+      if (html.startsWith('<ul') || html.startsWith('<ol')) return html
+      return `<p>${html}</p>`
+    })
+    .join('')
+}
+
+// Ensures semantic tags carry inline styles for email client compatibility
+function normalizeForEmail(html: string): string {
+  return html
+    .replace(/<strong(?![^>]*style)[^>]*>/g, '<strong style="font-weight:700">')
+    .replace(/<em(?![^>]*style)[^>]*>/g, '<em style="font-style:italic">')
+    .replace(/<u\b(?![^>]*style)[^>]*>/g, '<u style="text-decoration:underline">')
+}
+
+function htmlToParagraphs(html: string, existingIds: string[]): BodyParagraph[] {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const result: BodyParagraph[] = []
+  Array.from(doc.body.children).forEach((node, i) => {
+    const raw = node.tagName === 'P' ? node.innerHTML : node.outerHTML
+    if (!raw || raw === '<br>' || !raw.trim()) return
+    result.push({ id: existingIds[i] ?? crypto.randomUUID(), html: normalizeForEmail(raw) })
+  })
   return result
 }
 
-function stripToSafeHtml(html: string): string {
-  let result = html
-  // Remove entire block elements that carry Word junk (style sheets, head, scripts, comments)
-  result = result.replace(/<style[\s\S]*?<\/style>/gi, '')
-  result = result.replace(/<head[\s\S]*?<\/head>/gi, '')
-  result = result.replace(/<script[\s\S]*?<\/script>/gi, '')
-  result = result.replace(/<!--[\s\S]*?-->/g, '')
-  result = result.replace(/<xml[\s\S]*?<\/xml>/gi, '')
-  result = normalizeBold(result)
-  result = result
-    .replace(/<strong style="font-weight:700">/g, '\x00OPEN\x00')
-    .replace(/<\/strong>/g, '\x00CLOSE\x00')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\x00OPEN\x00/g, '<strong style="font-weight:700">')
-    .replace(/\x00CLOSE\x00/g, '</strong>')
-  // Collapse whitespace left by stripped tags
-  result = result.replace(/\s+/g, ' ').trim()
-  return result
-}
-
-interface ParagraphItemProps {
-  para: BodyParagraph
-  canDelete: boolean
-  onChange: (html: string) => void
-  onDelete: () => void
-}
-
-function ParagraphItem({ para, canDelete, onChange, onDelete }: ParagraphItemProps) {
-  const divRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (divRef.current) {
-      divRef.current.innerHTML = para.html
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const handleInput = () => {
-    if (divRef.current) onChange(divRef.current.innerHTML)
-  }
-
-  const handleBlur = () => {
-    if (!divRef.current) return
-    const normalized = normalizeBold(divRef.current.innerHTML)
-    if (normalized !== divRef.current.innerHTML) {
-      divRef.current.innerHTML = normalized
-    }
-    onChange(normalized)
-  }
-
-  const handleBold = () => {
-    if (!divRef.current) return
-    divRef.current.focus()
-    document.execCommand('bold', false)
-    onChange(divRef.current.innerHTML)
-  }
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    const htmlData = e.clipboardData.getData('text/html')
-    const textData = e.clipboardData.getData('text/plain')
-    const clean = htmlData
-      ? stripToSafeHtml(htmlData)
-      : textData.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    document.execCommand('insertHTML', false, clean)
-    if (divRef.current) onChange(divRef.current.innerHTML)
-  }
-
+function ToolbarButton({
+  onClick,
+  active,
+  title,
+  children,
+}: {
+  onClick: () => void
+  active: boolean
+  title: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="flex gap-2 items-start">
-      <div className="flex-1 border rounded-md overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/40">
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault()
-              handleBold()
-            }}
-            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            title="Bold"
-          >
-            <Bold className="w-3 h-3" />
-          </button>
-        </div>
-        <div
-          ref={divRef}
-          contentEditable
-          suppressContentEditableWarning
-          onInput={handleInput}
-          onBlur={handleBlur}
-          onPaste={handlePaste}
-          className="px-3 py-2 text-sm outline-none min-h-[60px] leading-relaxed"
-        />
-      </div>
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={!canDelete}
-        className="mt-8 p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
-    </div>
+    <button
+      type="button"
+      onMouseDown={(e) => {
+        e.preventDefault()
+        onClick()
+      }}
+      title={title}
+      className={cn(
+        'p-1 rounded transition-colors',
+        active
+          ? 'bg-accent text-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+      )}
+    >
+      {children}
+    </button>
   )
 }
 
@@ -124,37 +76,71 @@ interface ParagraphEditorProps {
 }
 
 export default function ParagraphEditor({ value, onChange }: ParagraphEditorProps) {
-  const addParagraph = () => {
-    onChange([...value, { id: crypto.randomUUID(), html: '' }])
-  }
+  const idTracker = useRef<string[]>(value.map((p) => p.id))
 
-  const updateParagraph = (id: string, html: string) => {
-    onChange(value.map((p) => (p.id === id ? { ...p, html } : p)))
-  }
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        blockquote: false,
+        code: false,
+        codeBlock: false,
+        heading: false,
+        horizontalRule: false,
+        strike: false,
+      }),
+      Underline,
+    ],
+    content: paragraphsToHtml(value),
+    onUpdate({ editor }) {
+      const paragraphs = htmlToParagraphs(editor.getHTML(), idTracker.current)
+      idTracker.current = paragraphs.map((p) => p.id)
+      onChange(paragraphs)
+    },
+    editorProps: {
+      attributes: {
+        class: 'outline-none min-h-[120px] px-3 py-2 text-sm leading-relaxed',
+      },
+    },
+  })
 
-  const deleteParagraph = (id: string) => {
-    onChange(value.filter((p) => p.id !== id))
-  }
+  if (!editor) return null
 
   return (
-    <div className="space-y-2">
-      {value.map((para) => (
-        <ParagraphItem
-          key={para.id}
-          para={para}
-          canDelete={value.length > 1}
-          onChange={(html) => updateParagraph(para.id, html)}
-          onDelete={() => deleteParagraph(para.id)}
-        />
-      ))}
-      <button
-        type="button"
-        onClick={addParagraph}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
-      >
-        <Plus className="w-3 h-3" />
-        Add paragraph
-      </button>
+    <div className="border rounded-md overflow-hidden">
+      <div className="flex items-center gap-0.5 px-2 py-1 border-b bg-muted/40">
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          active={editor.isActive('bold')}
+          title="Bold"
+        >
+          <Bold className="w-3 h-3" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          active={editor.isActive('italic')}
+          title="Italic"
+        >
+          <Italic className="w-3 h-3" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          active={editor.isActive('underline')}
+          title="Underline"
+        >
+          <UnderlineIcon className="w-3 h-3" />
+        </ToolbarButton>
+        <div className="w-px h-4 bg-border mx-1" />
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          active={editor.isActive('bulletList')}
+          title="Bullet list"
+        >
+          <List className="w-3 h-3" />
+        </ToolbarButton>
+      </div>
+      <div className="[&_.tiptap_p]:mb-1 [&_.tiptap_ul]:pl-5 [&_.tiptap_ul]:my-1 [&_.tiptap_ul]:list-disc [&_.tiptap_ol]:pl-5 [&_.tiptap_ol]:my-1 [&_.tiptap_ol]:list-decimal [&_.tiptap_li]:mb-0.5">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   )
 }

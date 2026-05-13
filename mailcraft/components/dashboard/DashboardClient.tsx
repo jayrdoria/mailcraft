@@ -3,6 +3,7 @@
 import { apiFetch } from '@/lib/apiFetch'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
@@ -97,19 +98,42 @@ function TemplateMenu({
   languages, onCopyClean, onCopyFull, onDownload, onDownloadZip, onShare, onDuplicate, onDelete,
 }: TemplateMenuProps) {
   const [open, setOpen] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 })
   const [selectedLang, setSelectedLang] = useState(languages[0] ?? 'en')
   const menuRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const target = e.target as Node
+      const insideButton = menuRef.current?.contains(target)
+      const insideDropdown = dropdownRef.current?.contains(target)
+      if (!insideButton && !insideDropdown) setOpen(false)
     }
+    function handleScroll() { setOpen(false) }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    window.addEventListener('scroll', handleScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('scroll', handleScroll, true)
+    }
   }, [open])
+
+  function handleToggle(e: React.MouseEvent) {
+    e.preventDefault()
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const dropdownHeight = 260
+      const openUpward = window.innerHeight - rect.bottom < dropdownHeight
+      setDropdownPos({
+        top: openUpward ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    setOpen((v) => !v)
+  }
 
   const exportItems: { label: string; icon: React.ElementType; action: () => void }[] = [
     { label: 'Copy Clean HTML', icon: Copy, action: () => onCopyClean(selectedLang) },
@@ -127,7 +151,8 @@ function TemplateMenu({
   return (
     <div ref={menuRef} className="relative">
       <button
-        onClick={(e) => { e.preventDefault(); setOpen((v) => !v) }}
+        ref={buttonRef}
+        onClick={handleToggle}
         className="p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground
                    transition-colors cursor-pointer"
         aria-label="More actions"
@@ -135,10 +160,11 @@ function TemplateMenu({
         <MoreHorizontal className="w-4 h-4" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute right-0 top-7 z-50 min-w-[180px] rounded-lg border bg-popover
-                     shadow-xl shadow-black/30 py-1 animate-in fade-in-0 zoom-in-95 duration-100"
+          ref={dropdownRef}
+          style={{ position: 'fixed', top: dropdownPos.top, right: dropdownPos.right, zIndex: 9999 }}
+          className="min-w-[180px] rounded-lg border bg-popover shadow-xl shadow-black/30 py-1 animate-in fade-in-0 zoom-in-95 duration-100"
         >
           {languages.length > 1 && (
             <div className="px-2 py-1.5 border-b mb-1">
@@ -187,7 +213,8 @@ function TemplateMenu({
               </button>
             )
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
