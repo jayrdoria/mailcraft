@@ -181,7 +181,7 @@ export default function ParagraphEditor({ value, onChange, alignment = 'center',
           idTracker.current = collapsed.map((p) => p.id)
           onChange(collapsed)
           queueMicrotask(() =>
-            editor.commands.setContent(paragraphsToHtml(collapsed), false)
+            editor.commands.setContent(paragraphsToHtml(collapsed), { emitUpdate: false })
           )
         }
       }

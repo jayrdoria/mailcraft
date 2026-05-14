@@ -21,7 +21,8 @@ export const GET = apiHandler(async (_req, ctx) => {
   if (!template || !template.isActive) return apiError('Template not found', 404)
 
   if (session.user.role !== 'ADMIN') {
-    const { lockedFields: _lf, ...rest } = template
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { lockedFields, ...rest } = template
     return apiSuccess(rest)
   }
   return apiSuccess(template)

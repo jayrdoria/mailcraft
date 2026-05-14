@@ -10,7 +10,6 @@ import { Check, Copy, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
 import { LanguageSelector } from './FieldEditor'
-import type { Language } from '@/lib/types/template'
 
 interface ExportButtonsProps {
   savedTemplateId: string
