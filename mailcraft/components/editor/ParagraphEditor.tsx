@@ -4,7 +4,7 @@ import { useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
-import { Bold, Italic, Underline as UnderlineIcon, List } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, List, AlignCenter, AlignJustify } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { BodyParagraph } from '@/lib/types/template'
 
@@ -73,9 +73,11 @@ function ToolbarButton({
 interface ParagraphEditorProps {
   value: BodyParagraph[]
   onChange: (v: BodyParagraph[]) => void
+  alignment?: 'center' | 'left'
+  onAlignmentChange?: (alignment: 'center' | 'left') => void
 }
 
-export default function ParagraphEditor({ value, onChange }: ParagraphEditorProps) {
+export default function ParagraphEditor({ value, onChange, alignment = 'center', onAlignmentChange }: ParagraphEditorProps) {
   const idTracker = useRef<string[]>(value.map((p) => p.id))
 
   const editor = useEditor({
@@ -137,6 +139,25 @@ export default function ParagraphEditor({ value, onChange }: ParagraphEditorProp
         >
           <List className="w-3 h-3" />
         </ToolbarButton>
+        {onAlignmentChange && (
+          <>
+            <div className="w-px h-4 bg-border mx-1" />
+            <ToolbarButton
+              onClick={() => onAlignmentChange('center')}
+              active={alignment === 'center'}
+              title="Center align"
+            >
+              <AlignCenter className="w-3 h-3" />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => onAlignmentChange('left')}
+              active={alignment === 'left'}
+              title="Left / Justify"
+            >
+              <AlignJustify className="w-3 h-3" />
+            </ToolbarButton>
+          </>
+        )}
       </div>
       <div className="[&_.tiptap_p]:mb-1 [&_.tiptap_ul]:pl-5 [&_.tiptap_ul]:my-1 [&_.tiptap_ul]:list-disc [&_.tiptap_ol]:pl-5 [&_.tiptap_ol]:my-1 [&_.tiptap_ol]:list-decimal [&_.tiptap_li]:mb-0.5">
         <EditorContent editor={editor} />

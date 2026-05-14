@@ -10,7 +10,7 @@ import { LANGUAGES } from '@/lib/types/template'
 import { readTemplateHtml, writeTemplateHtml } from '@/lib/services/fileService'
 import { deleteSection } from '@/lib/services/sectionService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
-import { renderBodyParagraphs } from '@/lib/paragraphRenderer'
+import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRenderer'
 import { escapeHtml, sanitizeUrl } from '@/lib/utils/escapeHtml'
 
 // ─────────────────────────────────────────────
@@ -41,6 +41,7 @@ export function buildSectionTransformer(
 function injectTokens(html: string, tokens: Record<string, FieldValue>, brand = 'STAKES'): string {
   let result = html
   for (const [key, value] of Object.entries(tokens)) {
+    if (key.startsWith('_')) continue
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const replacement = Array.isArray(value)
       ? renderBodyParagraphs(value, brand)
@@ -61,21 +62,25 @@ function injectEditableTokens(
   html: string,
   tokens: Record<string, FieldValue>,
   fieldConfigs: TemplateFieldConfig[],
-  brand = 'STAKES'
+  brand = 'STAKES',
+  alignment: BodyAlignment = 'center'
 ): string {
   const typeMap = new Map(fieldConfigs.map((f) => [f.key, f.type]))
   let result = html
   for (const [key, value] of Object.entries(tokens)) {
+    if (key.startsWith('_')) continue
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     let replacement: string
     if (Array.isArray(value)) {
-      replacement = renderBodyParagraphs(value, brand)
+      replacement = renderBodyParagraphs(value, brand, alignment)
     } else {
       const fieldType = typeMap.get(key)
       replacement =
         fieldType === 'url' || fieldType === 'link'
           ? sanitizeUrl(value)
-          : escapeHtml(value)
+          : fieldType === 'richtext'
+            ? value  // richtext contains intentional HTML — inject as-is
+            : escapeHtml(value)
     }
     result = result.replace(new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g'), replacement)
   }
@@ -153,7 +158,10 @@ export async function renderTemplate(params: {
 
   // Pass 2: inject user's editable field values for this language (sanitized by field type)
   const langValues = fieldValues[lang] ?? {}
-  html = injectEditableTokens(html, langValues, editableFields, brand)
+  const savedAlignment = fieldValues.en?._bodyAlignment
+  const alignment: BodyAlignment =
+    typeof savedAlignment === 'string' && savedAlignment === 'left' ? 'left' : 'center'
+  html = injectEditableTokens(html, langValues, editableFields, brand, alignment)
 
   return html
 }

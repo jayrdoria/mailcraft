@@ -1,16 +1,17 @@
 import type { SavedSectionConfig, FieldValue } from '@/lib/types/template'
-import { renderBodyParagraphs } from '@/lib/paragraphRenderer'
+import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRenderer'
 
 // ─────────────────────────────────────────────
 // Token injection
 // ─────────────────────────────────────────────
 
-export function injectTokens(html: string, tokens: Record<string, FieldValue>, brand = 'STAKES'): string {
+export function injectTokens(html: string, tokens: Record<string, FieldValue>, brand = 'STAKES', alignment: BodyAlignment = 'center'): string {
   let result = html
   for (const [key, value] of Object.entries(tokens)) {
+    if (key.startsWith('_')) continue
     const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const replacement = Array.isArray(value)
-      ? renderBodyParagraphs(value, brand)
+      ? renderBodyParagraphs(value, brand, alignment)
       : value
     result = result.replace(new RegExp(`\\{\\{${escaped}\\}\\}`, 'g'), replacement)
   }
@@ -102,9 +103,10 @@ export function clientRender(
   masterPreviewHtml: string,
   fieldValues: Record<string, FieldValue>,
   sectionConfig: SavedSectionConfig[],
-  brand = 'STAKES'
+  brand = 'STAKES',
+  alignment: BodyAlignment = 'center'
 ): string {
   let html = applySectionConfig(masterPreviewHtml, sectionConfig)
-  html = injectTokens(html, fieldValues, brand)
+  html = injectTokens(html, fieldValues, brand, alignment)
   return html
 }

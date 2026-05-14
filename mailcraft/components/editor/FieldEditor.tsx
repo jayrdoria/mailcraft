@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
 import { clientRender } from '@/lib/clientRender'
 import ParagraphEditor from '@/components/editor/ParagraphEditor'
+import RichTextEditor from '@/components/editor/RichTextEditor'
 import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue, BodyParagraph } from '@/lib/types/template'
 import { LANGUAGE_LABELS, LANGUAGES } from '@/lib/types/template'
 
@@ -69,6 +70,9 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const requiredFields = useEditorStore((s) => s.requiredFields)
   const supportedLanguages = useEditorStore((s) => s.supportedLanguages)
   const brand = useEditorStore((s) => s.brand)
+  const masterTemplateId = useEditorStore((s) => s.masterTemplateId)
+  const bodyAlignment = useEditorStore((s) => s.bodyAlignment)
+  const setBodyAlignment = useEditorStore((s) => s.setBodyAlignment)
 
   // Build current section config from store state (not prop alone, so deletedSections is always fresh)
   const currentSectionConfig: SavedSectionConfig[] = sectionConfig.map((s) => ({
@@ -79,8 +83,8 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
 
   // Debounced preview update
   const updatePreview = useDebounce(
-    (html: string, values: Record<string, FieldValue>, sc: SavedSectionConfig[], br: string) => {
-      const rendered = clientRender(html, values, sc, br)
+    (html: string, values: Record<string, FieldValue>, sc: SavedSectionConfig[], br: string, align: 'center' | 'left') => {
+      const rendered = clientRender(html, values, sc, br, align)
       setRenderedHtml(rendered)
     },
     300
@@ -89,9 +93,9 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const currentLangValues = fieldValues[activeLanguage] ?? {}
 
   useEffect(() => {
-    updatePreview(masterPreviewHtml, currentLangValues, currentSectionConfig, brand)
+    updatePreview(masterPreviewHtml, currentLangValues, currentSectionConfig, brand, bodyAlignment)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterPreviewHtml, fieldValues, activeSections, deletedSections, activeLanguage])
+  }, [masterPreviewHtml, fieldValues, activeSections, deletedSections, activeLanguage, bodyAlignment])
 
   // Fields grouped by section
   const fieldsBySectionName = editableFields.reduce<Record<string, TemplateFieldConfig[]>>(
@@ -176,9 +180,11 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                           {isRequired && <span className="text-destructive">*</span>}
                         </label>
                         <ParagraphEditor
-                          key={`${field.key}-${activeLanguage}`}
+                          key={`${masterTemplateId}-${field.key}-${activeLanguage}`}
                           value={paragraphs}
                           onChange={(v) => setFieldValue(field.key, v)}
+                          alignment={bodyAlignment}
+                          onAlignmentChange={setBodyAlignment}
                         />
                       </div>
                     )
@@ -195,14 +201,10 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                       </label>
 
                       {field.type === 'richtext' ? (
-                        <textarea
+                        <RichTextEditor
                           value={value}
-                          onChange={(e) => setFieldValue(field.key, e.target.value)}
+                          onChange={(v) => setFieldValue(field.key, v)}
                           placeholder={field.placeholder}
-                          rows={3}
-                          className="w-full px-3 py-2 text-sm rounded-md border bg-background
-                                     placeholder:text-muted-foreground resize-y
-                                     focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                       ) : (
                         <input

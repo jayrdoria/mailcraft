@@ -6,6 +6,7 @@ import type {
   FieldValue,
 } from '@/lib/types/template'
 import { LANGUAGES } from '@/lib/types/template'
+import type { BodyAlignment } from '@/lib/paragraphRenderer'
 
 export interface SetupConfig {
   activeSections: string[]
@@ -34,6 +35,7 @@ interface EditorStore {
   // Preview
   renderedHtml: string
   device: 'desktop' | 'tablet' | 'mobile'
+  bodyAlignment: BodyAlignment
 
   // Language
   activeLanguage: Language
@@ -61,6 +63,7 @@ interface EditorStore {
   setFieldValue: (key: string, value: FieldValue) => void
   applySetupConfig: (config: SetupConfig) => void
   setDevice: (device: EditorStore['device']) => void
+  setBodyAlignment: (alignment: BodyAlignment) => void
   setActiveLanguage: (lang: Language) => void
   openSetupModal: () => void
   closeSetupModal: () => void
@@ -85,6 +88,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   fieldValues: EMPTY_FIELD_VALUES,
   renderedHtml: '',
   device: 'desktop',
+  bodyAlignment: 'center',
   activeLanguage: 'en',
   supportedLanguages: LANGUAGES,
   isDirty: false,
@@ -99,6 +103,10 @@ export const useEditorStore = create<EditorStore>((set) => ({
       .filter((s) => s.isDeleted)
       .map((s) => s.name)
 
+    const savedAlignment = data.fieldValues.en?._bodyAlignment
+    const bodyAlignment: BodyAlignment =
+      typeof savedAlignment === 'string' && savedAlignment === 'left' ? 'left' : 'center'
+
     set({
       masterTemplateId: data.masterTemplateId,
       savedTemplateId: data.savedTemplateId,
@@ -112,6 +120,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
       activeLanguage: data.supportedLanguages[0] ?? 'en',
       isDirty: false,
       isSetupModalOpen: data.openSetupModal,
+      bodyAlignment,
     })
   },
 
@@ -133,6 +142,16 @@ export const useEditorStore = create<EditorStore>((set) => ({
     const { activeSections, requiredFields, deletedSections } = config
     set({ activeSections, deletedSections, requiredFields, isDirty: true })
   },
+
+  setBodyAlignment: (alignment) =>
+    set((state) => ({
+      bodyAlignment: alignment,
+      isDirty: true,
+      fieldValues: {
+        ...state.fieldValues,
+        en: { ...state.fieldValues.en, _bodyAlignment: alignment },
+      },
+    })),
 
   setDevice: (device) => set({ device }),
   setActiveLanguage: (lang) => set({ activeLanguage: lang }),
