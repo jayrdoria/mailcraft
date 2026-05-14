@@ -27,15 +27,66 @@ function normalizeForEmail(html: string): string {
     .replace(/<u\b(?![^>]*style)[^>]*>/g, '<u style="text-decoration:underline">')
 }
 
+function isWordHtml(html: string): boolean {
+  return html.includes('mso-') || html.includes('<o:p') || html.includes('urn:schemas-microsoft-com')
+}
+
+function isGoogleSheetsHtml(html: string): boolean {
+  return (
+    html.includes('google-sheets-html-origin') ||
+    html.includes('data-sheets-value') ||
+    html.includes('sheets.googleusercontent.com') ||
+    // Sheets always emits this exact padding on td elements
+    html.includes('padding:2px 3px 2px 3px') ||
+    html.includes('padding: 2px 3px 2px 3px')
+  )
+}
+
+function cellHasBold(cell: Element): boolean {
+  // Check td-level style first
+  if (/font-weight\s*:\s*(bold|700)/i.test(cell.getAttribute('style') ?? '')) return true
+  // Fall back to any child element with explicit bold style
+  return Array.from(cell.querySelectorAll('[style]')).some((el) =>
+    /font-weight\s*:\s*(bold|700)/i.test(el.getAttribute('style') ?? '')
+  )
+}
+
+// Converts Google Sheets clipboard HTML (table structure) into clean <p> tags,
+// wrapping bold cells in <strong> since Sheets uses td-level font-weight instead of <strong>.
+function convertSheetsToParagraphs(html: string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const rows = Array.from(doc.querySelectorAll('tr'))
+  if (!rows.length) return html
+
+  return rows
+    .map((row) => {
+      const cells = Array.from(row.querySelectorAll('td, th'))
+      const cellTexts = cells.map((cell) => {
+        const text = (cell.textContent ?? '').replace(/ /g, '').trim()
+        if (!text) return ''
+        return cellHasBold(cell) ? `<strong style="font-weight:700">${text}</strong>` : text
+      })
+      const line = cellTexts.filter(Boolean).join(' ')
+      return line ? `<p>${line}</p>` : '<p></p>'
+    })
+    .join('')
+}
+
+function isEmptyContent(raw: string): boolean {
+  if (!raw || raw === '<br>' || !raw.trim()) return true
+  // Strip tags and &nbsp; — if nothing remains, treat as empty (handles Word-pasted blank lines)
+  const text = raw.replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, '').trim()
+  return text === ''
+}
+
 function htmlToParagraphs(html: string, existingIds: string[]): BodyParagraph[] {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
   const result: BodyParagraph[] = []
   Array.from(doc.body.children).forEach((node, i) => {
     const raw = node.tagName === 'P' ? node.innerHTML : node.outerHTML
-    // Keep empty paragraphs as blank lines — they render as spacing in the email
-    const isEmpty = !raw || raw === '<br>' || !raw.trim()
-    result.push({ id: existingIds[i] ?? crypto.randomUUID(), html: isEmpty ? '' : normalizeForEmail(raw) })
+    result.push({ id: existingIds[i] ?? crypto.randomUUID(), html: isEmptyContent(raw) ? '' : normalizeForEmail(raw) })
   })
   return result
 }
@@ -80,6 +131,7 @@ interface ParagraphEditorProps {
 
 export default function ParagraphEditor({ value, onChange, alignment = 'center', onAlignmentChange }: ParagraphEditorProps) {
   const idTracker = useRef<string[]>(value.map((p) => p.id))
+  const isWordPaste = useRef(false)
 
   const editor = useEditor({
     extensions: [
@@ -94,10 +146,45 @@ export default function ParagraphEditor({ value, onChange, alignment = 'center',
       Underline,
     ],
     content: paragraphsToHtml(value),
+    // Sheets: intercept before TipTap, convert table rows → clean <p> with bold preserved.
+    // Word: let TipTap handle natively (preserves bold), flag the paste so onUpdate strips blank lines.
+    onCreate({ editor }) {
+      editor.view.dom.addEventListener('paste', (e: Event) => {
+        const html = (e as ClipboardEvent).clipboardData?.getData('text/html')
+        if (!html) return
+
+        if (isGoogleSheetsHtml(html)) {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          const converted = convertSheetsToParagraphs(html)
+          setTimeout(() => editor.commands.insertContent(converted), 0)
+          return
+        }
+
+        if (isWordHtml(html)) {
+          // Don't intercept — TipTap's native handler preserves bold correctly.
+          // Flag it so onUpdate can strip the blank lines Word inserts.
+          isWordPaste.current = true
+        }
+      }, true)
+    },
     onUpdate({ editor }) {
       const paragraphs = htmlToParagraphs(editor.getHTML(), idTracker.current)
       idTracker.current = paragraphs.map((p) => p.id)
       onChange(paragraphs)
+
+      if (isWordPaste.current) {
+        isWordPaste.current = false
+        const hasEmpty = paragraphs.some((p) => p.html === '')
+        if (hasEmpty) {
+          const collapsed = paragraphs.filter((p) => p.html !== '')
+          idTracker.current = collapsed.map((p) => p.id)
+          onChange(collapsed)
+          queueMicrotask(() =>
+            editor.commands.setContent(paragraphsToHtml(collapsed), false)
+          )
+        }
+      }
     },
     editorProps: {
       attributes: {

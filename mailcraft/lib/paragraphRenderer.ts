@@ -35,8 +35,9 @@ export function renderBodyParagraphs(
   return paragraphs
     .map((p, i) => {
       const isLast = i === paragraphs.length - 1
-      // Empty paragraph = compact spacer (~14px), not a full-height blank line
-      if (!p.html) {
+      // Empty paragraph or &nbsp;-only (Word paste) = compact spacer (~14px)
+      const textContent = p.html.replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, '').trim()
+      if (!p.html || textContent === '') {
         return `<p style="margin: 0; font-size: 4px; line-height: 1; padding-bottom: 10px;">&nbsp;</p>`
       }
       const html = p.html
