@@ -33,8 +33,9 @@ function htmlToParagraphs(html: string, existingIds: string[]): BodyParagraph[] 
   const result: BodyParagraph[] = []
   Array.from(doc.body.children).forEach((node, i) => {
     const raw = node.tagName === 'P' ? node.innerHTML : node.outerHTML
-    if (!raw || raw === '<br>' || !raw.trim()) return
-    result.push({ id: existingIds[i] ?? crypto.randomUUID(), html: normalizeForEmail(raw) })
+    // Keep empty paragraphs as blank lines — they render as spacing in the email
+    const isEmpty = !raw || raw === '<br>' || !raw.trim()
+    result.push({ id: existingIds[i] ?? crypto.randomUUID(), html: isEmpty ? '' : normalizeForEmail(raw) })
   })
   return result
 }

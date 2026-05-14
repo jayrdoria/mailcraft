@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Lock } from 'lucide-react'
+import { Lock, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
 import { clientRender } from '@/lib/clientRender'
@@ -73,6 +73,32 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const masterTemplateId = useEditorStore((s) => s.masterTemplateId)
   const bodyAlignment = useEditorStore((s) => s.bodyAlignment)
   const setBodyAlignment = useEditorStore((s) => s.setBodyAlignment)
+  const setFieldValueAllLanguages = useEditorStore((s) => s.setFieldValueAllLanguages)
+
+  // Session-only: tracks which url fields are synced across all languages
+  const [syncedFields, setSyncedFields] = useState<Set<string>>(new Set())
+
+  function handleSyncToggle(fieldKey: string, currentValue: string) {
+    setSyncedFields((prev) => {
+      const next = new Set(prev)
+      if (next.has(fieldKey)) {
+        next.delete(fieldKey)
+      } else {
+        next.add(fieldKey)
+        // Immediately copy current value to all languages
+        setFieldValueAllLanguages(fieldKey, currentValue)
+      }
+      return next
+    })
+  }
+
+  function handleUrlChange(fieldKey: string, newValue: string) {
+    if (syncedFields.has(fieldKey)) {
+      setFieldValueAllLanguages(fieldKey, newValue)
+    } else {
+      setFieldValue(fieldKey, newValue)
+    }
+  }
 
   // Build current section config from store state (not prop alone, so deletedSections is always fresh)
   const currentSectionConfig: SavedSectionConfig[] = sectionConfig.map((s) => ({
@@ -193,12 +219,32 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                   const rawValue = currentLangValues[field.key]
                   const value = typeof rawValue === 'string' ? rawValue : (field.defaultValue ?? '')
 
+                  const isSynced = syncedFields.has(field.key)
+
                   return (
                     <div key={field.key}>
-                      <label className="flex items-center gap-1 text-xs font-medium mb-1">
-                        {field.label}
-                        {isRequired && <span className="text-destructive">*</span>}
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="flex items-center gap-1 text-xs font-medium">
+                          {field.label}
+                          {isRequired && <span className="text-destructive">*</span>}
+                        </label>
+                        {field.type === 'url' && (
+                          <button
+                            type="button"
+                            onClick={() => handleSyncToggle(field.key, value)}
+                            title={isSynced ? 'Synced to all languages — click to unsync' : 'Sync this value to all languages'}
+                            className={cn(
+                              'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors cursor-pointer',
+                              isSynced
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                            )}
+                          >
+                            <Globe className="w-2.5 h-2.5" />
+                            {isSynced ? 'All langs' : 'Sync all'}
+                          </button>
+                        )}
+                      </div>
 
                       {field.type === 'richtext' ? (
                         <RichTextEditor
@@ -210,7 +256,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                         <input
                           type={field.type === 'url' ? 'url' : 'text'}
                           value={value}
-                          onChange={(e) => setFieldValue(field.key, e.target.value)}
+                          onChange={(e) => handleUrlChange(field.key, e.target.value)}
                           placeholder={field.placeholder}
                           className="w-full px-3 py-2 text-sm rounded-md border bg-background
                                      placeholder:text-muted-foreground

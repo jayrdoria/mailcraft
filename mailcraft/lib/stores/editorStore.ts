@@ -61,6 +61,7 @@ interface EditorStore {
   }) => void
   setTemplateName: (name: string) => void
   setFieldValue: (key: string, value: FieldValue) => void
+  setFieldValueAllLanguages: (key: string, value: FieldValue) => void
   applySetupConfig: (config: SetupConfig) => void
   setDevice: (device: EditorStore['device']) => void
   setBodyAlignment: (alignment: BodyAlignment) => void
@@ -137,6 +138,15 @@ export const useEditorStore = create<EditorStore>((set) => ({
         },
       },
     })),
+
+  setFieldValueAllLanguages: (key, value) =>
+    set((state) => {
+      const updated = { ...state.fieldValues }
+      for (const lang of state.supportedLanguages) {
+        updated[lang] = { ...updated[lang], [key]: value }
+      }
+      return { isDirty: true, fieldValues: updated }
+    }),
 
   applySetupConfig: (config) => {
     const { activeSections, requiredFields, deletedSections } = config

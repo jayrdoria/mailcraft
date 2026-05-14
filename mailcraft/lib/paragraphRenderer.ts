@@ -17,7 +17,7 @@ function renderList(html: string, brand: string, isLast: boolean, alignment: Bod
   const textAlign = alignment === 'left' ? 'text-align: justify;' : 'text-align: center;'
 
   const listStyle = `padding-left: 0; margin: 0; padding-bottom: ${bottomPadding}; list-style-type: ${isOrdered ? 'decimal' : 'disc'}; list-style-position: inside;`
-  const itemStyle = `font-family: ${font}; font-size: 15px; font-weight: 400; color: #ffffff; line-height: 1.5; ${textAlign} margin-bottom: 4px;`
+  const itemStyle = `font-family: ${font}; font-size: 15px; font-weight: 400; color: #ffffff; line-height: 1.5; ${textAlign} margin-bottom: 0;`
 
   return html
     .replace(/<(ul|ol)[^>]*>/, `<$1 style="${listStyle}">`)
@@ -35,7 +35,11 @@ export function renderBodyParagraphs(
   return paragraphs
     .map((p, i) => {
       const isLast = i === paragraphs.length - 1
-      const html = p.html || '&nbsp;'
+      // Empty paragraph = compact spacer (~14px), not a full-height blank line
+      if (!p.html) {
+        return `<p style="margin: 0; font-size: 4px; line-height: 1; padding-bottom: 10px;">&nbsp;</p>`
+      }
+      const html = p.html
       if (html.trimStart().startsWith('<ul') || html.trimStart().startsWith('<ol')) {
         return renderList(html, brand, isLast, alignment)
       }
