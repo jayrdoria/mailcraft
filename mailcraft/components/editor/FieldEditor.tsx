@@ -14,6 +14,8 @@ function normalizeGroup(group: string): string {
   return group.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
 }
 
+const SYNC_ALL_FIELDS = new Set(['BANNER_IMG', 'THUMB1_IMG', 'THUMB2_IMG'])
+
 interface FieldEditorProps {
   editableFields: TemplateFieldConfig[]
   sectionConfig: SavedSectionConfig[]
@@ -228,7 +230,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                           {field.label}
                           {isRequired && <span className="text-destructive">*</span>}
                         </label>
-                        {field.type === 'url' && (
+                        {SYNC_ALL_FIELDS.has(field.key) && (
                           <button
                             type="button"
                             onClick={() => handleSyncToggle(field.key, value)}
