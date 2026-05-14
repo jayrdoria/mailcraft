@@ -116,7 +116,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
   useEffect(() => {
     if (!editor || value === valueRef.current) return
     valueRef.current = value
-    editor.commands.setContent(wrapForEditor(value), false)
+    editor.commands.setContent(wrapForEditor(value), { emitUpdate: false })
   }, [editor, value])
 
   if (!editor) return null
