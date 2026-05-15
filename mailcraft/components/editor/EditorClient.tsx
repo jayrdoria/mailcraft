@@ -9,7 +9,6 @@ import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
 import { toast } from 'sonner'
 import { ArrowLeft, Settings, Save, Loader2, AlertTriangle } from 'lucide-react'
-import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
 
@@ -124,6 +123,16 @@ export default function EditorClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Warn on browser tab close / refresh when there are unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!useEditorStore.getState().isDirty) return
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [])
+
   // GSAP: save button pulse while saving
   const saveBtnRef = useRef<HTMLButtonElement>(null)
   useGSAP(
@@ -235,6 +244,17 @@ export default function EditorClient({
 
     setIsSaving(true)
 
+    // Always stamp _bodyAlignment from the store's authoritative bodyAlignment so the
+    // visual state is what gets persisted — not a potentially stale fieldValues entry.
+    const currentBodyAlignment = useEditorStore.getState().bodyAlignment
+    const fieldValuesToSave: MultiLanguageFieldValues = {
+      ...storeFieldValues,
+      en: {
+        ...storeFieldValues.en,
+        _bodyAlignment: currentBodyAlignment,
+      },
+    }
+
     const builtSectionConfig: SavedSectionConfig[] = allSections.map((s) => ({
       name: s.name,
       label: s.label,
@@ -246,13 +266,13 @@ export default function EditorClient({
       createMutation.mutate({
         name: templateName,
         masterTemplateId: masterTemplate.id,
-        fieldValues: storeFieldValues,
+        fieldValues: fieldValuesToSave,
         sectionConfig: builtSectionConfig,
       })
     } else {
       updateMutation.mutate({
         name: templateName,
-        fieldValues: storeFieldValues,
+        fieldValues: fieldValuesToSave,
         sectionConfig: builtSectionConfig,
       })
     }
@@ -285,12 +305,15 @@ export default function EditorClient({
           ref={headerRef}
           className="flex items-center gap-3 px-4 py-3 border-b bg-card shrink-0"
         >
-          <Link
-            href="/dashboard"
-            className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground"
+          <button
+            onClick={() => {
+              if (isDirty && !window.confirm('You have unsaved changes. Leave without saving?')) return
+              router.push('/dashboard')
+            }}
+            className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-          </Link>
+          </button>
 
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span>

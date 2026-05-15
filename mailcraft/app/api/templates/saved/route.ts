@@ -109,6 +109,12 @@ export const POST = apiHandler(async (req) => {
         initialFieldValues[lang][field.key] = field.defaultValue
       }
     }
+    // Carry over meta-keys (e.g. _bodyAlignment) — not in editableFields but must be preserved
+    for (const [key, value] of Object.entries(fieldValues[lang] ?? {})) {
+      if (key.startsWith('_')) {
+        initialFieldValues[lang][key] = value
+      }
+    }
   }
 
   const saved = await createSavedTemplate({

@@ -71,6 +71,7 @@ interface EditorStore {
   setRenderedHtml: (html: string) => void
   setIsSaving: (v: boolean) => void
   markClean: () => void
+  reset: () => void
 }
 
 const EMPTY_FIELD_VALUES: MultiLanguageFieldValues = {
@@ -176,4 +177,23 @@ export const useEditorStore = create<EditorStore>((set) => ({
   setRenderedHtml: (html) => set({ renderedHtml: html }),
   setIsSaving: (v) => set({ isSaving: v }),
   markClean: () => set({ isDirty: false }),
+  reset: () => set({
+    templateName: '',
+    masterTemplateId: '',
+    savedTemplateId: null,
+    brand: '',
+    masterPreviewHtml: '',
+    activeSections: [],
+    deletedSections: [],
+    requiredFields: [],
+    fieldValues: EMPTY_FIELD_VALUES,
+    renderedHtml: '',
+    device: 'desktop',
+    bodyAlignment: 'center',
+    activeLanguage: 'en',
+    supportedLanguages: LANGUAGES,
+    isDirty: false,
+    isSaving: false,
+    isSetupModalOpen: false,
+  }),
 }))
