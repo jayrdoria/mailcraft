@@ -77,6 +77,9 @@ const EMPTY_FIELD_VALUES: MultiLanguageFieldValues = {
   en: {}, fr: {}, frca: {}, de: {}, it: {}, es: {},
 }
 
+// Sections that default to OFF when creating a brand-new template
+const DEFAULT_INACTIVE_SECTIONS = new Set(['USERNAME_PASSWORD', 'LEGAL'])
+
 export const useEditorStore = create<EditorStore>((set) => ({
   templateName: '',
   masterTemplateId: '',
@@ -99,7 +102,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   init: (data) => {
     const activeSections = data.sectionConfig.length > 0
       ? data.sectionConfig.filter((s) => s.isActive && !s.isDeleted).map((s) => s.name)
-      : (data.allSectionNames ?? [])
+      : (data.allSectionNames ?? []).filter((name) => !DEFAULT_INACTIVE_SECTIONS.has(name))
     const deletedSections = data.sectionConfig
       .filter((s) => s.isDeleted)
       .map((s) => s.name)
@@ -122,6 +125,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
       isDirty: false,
       isSetupModalOpen: data.openSetupModal,
       bodyAlignment,
+      // Clear stale renderedHtml from a previous template navigation so the
+      // preview never flashes wrong content before the new render fires.
+      renderedHtml: '',
     })
   },
 

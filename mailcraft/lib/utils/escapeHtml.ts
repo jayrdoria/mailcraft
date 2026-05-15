@@ -21,7 +21,9 @@ export function sanitizeUrl(url: string): string {
   try {
     const parsed = new URL(url)
     if (!['http:', 'https:'].includes(parsed.protocol)) return ''
-    return url
+    // Return the parsed href so spaces and unsafe chars are percent-encoded.
+    // This prevents CIO's paste handler from mangling URLs like "image name.jpg".
+    return parsed.href
   } catch {
     return ''
   }

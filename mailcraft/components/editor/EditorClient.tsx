@@ -8,7 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
 import { toast } from 'sonner'
-import { ArrowLeft, Settings, Save, Loader2 } from 'lucide-react'
+import { ArrowLeft, Settings, Save, Loader2, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
@@ -374,10 +374,17 @@ export default function EditorClient({
             {/* Export buttons (only for owner with a saved ID) */}
             {effectiveSavedId && isOwner && (
               <div className="p-4 border-t bg-card shrink-0">
-                <ExportButtons
-                  savedTemplateId={effectiveSavedId}
-                  templateName={templateName}
-                />
+                {isDirty ? (
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>You have unsaved changes — save the template to enable export.</span>
+                  </div>
+                ) : (
+                  <ExportButtons
+                    savedTemplateId={effectiveSavedId}
+                    templateName={templateName}
+                  />
+                )}
               </div>
             )}
           </div>

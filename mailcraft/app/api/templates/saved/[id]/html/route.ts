@@ -14,7 +14,7 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-const VALID_LANGS: Language[] = ['en', 'fr', 'de', 'it', 'es']
+const VALID_LANGS: Language[] = ['en', 'fr', 'frca', 'de', 'it', 'es']
 
 // GET /api/templates/saved/:id/html?lang=en — render HTML with section markers (editor view)
 export const GET = apiHandler(async (req, ctx) => {
