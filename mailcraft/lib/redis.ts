@@ -44,10 +44,18 @@ function getRedisClient(): Redis {
   return globalForRedis.redis
 }
 
-// Proxy defers init to first property access (request time, not build/import time)
+// Proxy defers init to first property access (request time, not build/import time).
+// Methods MUST be bound to the real client — otherwise they execute with `this`
+// set to the proxy, and internal writes inside ioredis (e.g. `this.condition = …`
+// during connect) silently land on the proxy target instead of the client.
+// That corrupts ioredis state and makes `connectHandler` throw an uncatchable
+// `TypeError: Cannot read properties of undefined (reading 'auth')` on every
+// connection attempt.
 export const redis = new Proxy({} as Redis, {
-  get(_, prop, receiver) {
-    return Reflect.get(getRedisClient(), prop, receiver)
+  get(_, prop) {
+    const client = getRedisClient()
+    const value = client[prop as keyof Redis]
+    return typeof value === 'function' ? value.bind(client) : value
   },
 })
 
