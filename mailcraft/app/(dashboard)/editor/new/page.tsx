@@ -43,8 +43,9 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
   const editableFields = masterTemplate.editableFields as unknown as TemplateFieldConfig[]
   const lockedFields = masterTemplate.lockedFields as unknown as LockedFieldConfig[]
 
-  const masterRaw = masterTemplate as unknown as { languages?: unknown }
+  const masterRaw = masterTemplate as unknown as { languages?: unknown; isImported?: boolean }
   const masterLanguages = (masterRaw.languages as Language[]) ?? []
+  const isImported = masterRaw.isImported === true
   const supportedLanguages: Language[] = masterLanguages.length > 0 ? masterLanguages : LANGUAGES
 
   // Default field values from field definitions — supports per-language overrides via defaultValues
@@ -105,6 +106,8 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
       masterPreviewHtml={masterPreviewHtml}
       isOwner={true}
       supportedLanguages={supportedLanguages}
+      isImported={isImported}
+      backHref={isImported ? '/imports' : '/dashboard'}
     />
   )
 }

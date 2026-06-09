@@ -109,6 +109,22 @@ export const createShareSchema = z.object({
 })
 
 // ─────────────────────────────────────────────
+// Import
+// ─────────────────────────────────────────────
+
+export const createImportSchema = z.object({
+  name:            z.string().min(1).max(150),
+  brand:           z.enum(['STAKES', 'X7']),
+  activeLanguages: z.array(languageSchema).min(1),
+  html:            z.string().min(1),
+  fieldMappings:   z.array(z.object({
+    mcId:  z.string().min(1),
+    label: z.string().min(1).max(100),
+    type:  z.enum(['text', 'url', 'link', 'richtext']),
+  })).min(1),
+})
+
+// ─────────────────────────────────────────────
 // Users
 // ─────────────────────────────────────────────
 

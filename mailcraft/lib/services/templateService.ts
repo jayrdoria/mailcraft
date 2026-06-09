@@ -11,6 +11,7 @@ export async function getMasterTemplates(brand?: 'STAKES' | 'X7') {
   return prisma.masterTemplate.findMany({
     where: {
       isActive: true,
+      isImported: false,
       ...(brand ? { brand } : {}),
     },
     orderBy: [{ brand: 'asc' }, { name: 'asc' }],

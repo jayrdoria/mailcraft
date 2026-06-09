@@ -20,7 +20,7 @@ export const GET = apiHandler(async () => {
 
   const [own, shared] = await Promise.all([
     prisma.savedTemplate.findMany({
-      where: { userId: session.user.id },
+      where: { userId: session.user.id, masterTemplate: { isImported: false } },
       include: {
         masterTemplate: { select: { id: true, name: true, brand: true, slug: true, languages: true, editableFields: true } },
       },

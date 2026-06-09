@@ -41,8 +41,9 @@ DEV.md
 Existing Emails/
 Stakes Email Templates - Created Not Used/
 
-# User-generated saved templates (runtime data, not source)
+# User-generated runtime data (not source code)
 mailcraft/data/templates/saved-templates/
+mailcraft/data/templates/imported/
 
 
 

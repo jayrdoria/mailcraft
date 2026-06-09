@@ -62,8 +62,9 @@ export default async function EditorPage({ params }: EditorPageProps) {
   const lockedFields = saved.masterTemplate.lockedFields as unknown as LockedFieldConfig[]
   const fieldValues = saved.fieldValues as unknown as MultiLanguageFieldValues
   const sectionConfig = saved.sectionConfig as unknown as SavedSectionConfig[]
-  const masterRaw = saved.masterTemplate as unknown as { languages?: unknown }
+  const masterRaw = saved.masterTemplate as unknown as { languages?: unknown; isImported?: boolean }
   const masterLanguages = (masterRaw.languages as Language[]) ?? []
+  const isImported = masterRaw.isImported === true
   const supportedLanguages: Language[] = masterLanguages.length > 0 ? masterLanguages : LANGUAGES
 
   // Fetch master preview HTML
@@ -100,6 +101,8 @@ export default async function EditorPage({ params }: EditorPageProps) {
       masterPreviewHtml={masterPreviewHtml}
       isOwner={isOwner}
       supportedLanguages={supportedLanguages}
+      isImported={isImported}
+      backHref={isImported ? '/imports' : '/dashboard'}
     />
   )
 }

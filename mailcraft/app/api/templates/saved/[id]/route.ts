@@ -141,6 +141,23 @@ export const DELETE = apiHandler(async (_req, ctx) => {
     }
   }
 
+  // For imported templates: also delete the hidden MasterTemplate + its HTML files.
+  // Only runs when the master is imported and owned by this user — never affects regular templates.
+  const masterRaw = existing.masterTemplate as unknown as { isImported?: boolean; importedBy?: string }
+  if (masterRaw.isImported === true && masterRaw.importedBy === session.user.id) {
+    const otherSaved = await prisma.savedTemplate.count({
+      where: { masterTemplateId: existing.masterTemplateId },
+    })
+    if (otherSaved === 0) {
+      await prisma.masterTemplate.delete({ where: { id: existing.masterTemplateId } })
+      try {
+        await deleteTemplateDir(existing.masterTemplate.baseFilePath)
+      } catch {
+        // Non-fatal — files may not exist
+      }
+    }
+  }
+
   await activityService.log({
     action: 'TEMPLATE_DELETED',
     userId: session.user.id,

@@ -83,7 +83,9 @@ model MasterTemplate {
   // e.g. /var/www/mailcraft/master-templates/stakes/email-verification/en.html
   baseFilePath String
 
-  isActive Boolean @default(true)
+  isActive   Boolean @default(true)
+  isImported Boolean @default(false)
+  importedBy String?
 
   // JSON: TemplateFieldConfig[] — editable fields shown in editor
   editableFields Json

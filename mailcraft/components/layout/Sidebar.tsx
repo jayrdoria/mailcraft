@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Mail,
   Layers,
+  Upload,
   Users,
   BookOpen,
   Activity,
@@ -34,6 +35,7 @@ interface NavItem {
 const mainNav: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Browse Templates', href: '/templates', icon: Mail },
+  { label: 'My Imports', href: '/imports', icon: Upload },
   { label: 'My Activity', href: '/activity', icon: Activity },
 ]
 

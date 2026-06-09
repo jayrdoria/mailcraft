@@ -49,6 +49,8 @@ interface EditorClientProps {
   masterPreviewHtml: string
   isOwner: boolean
   supportedLanguages?: Language[]
+  isImported?: boolean
+  backHref?: string
 }
 
 export default function EditorClient({
@@ -60,6 +62,8 @@ export default function EditorClient({
   masterPreviewHtml,
   isOwner,
   supportedLanguages = LANGUAGES,
+  isImported = false,
+  backHref = '/dashboard',
 }: EditorClientProps) {
   const router = useRouter()
   const qc = useQueryClient()
@@ -117,7 +121,7 @@ export default function EditorClient({
       sectionConfig,
       masterPreviewHtml,
       supportedLanguages,
-      openSetupModal: sectionConfig.length === 0 && allSections.length > 0,
+      openSetupModal: !isImported && sectionConfig.length === 0 && allSections.length > 0,
       allSectionNames: allSections.map((s) => s.name),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -308,7 +312,7 @@ export default function EditorClient({
           <button
             onClick={() => {
               if (isDirty && !window.confirm('You have unsaved changes. Leave without saving?')) return
-              router.push('/dashboard')
+              router.push(backHref)
             }}
             className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground cursor-pointer"
           >
