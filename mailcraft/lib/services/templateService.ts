@@ -57,8 +57,9 @@ export async function createSavedTemplate(params: {
   name: string
   fieldValues: MultiLanguageFieldValues
   sectionConfig: SavedSectionConfig[]
+  folderId?: string | null
 }) {
-  const { userId, masterTemplateId, name, fieldValues, sectionConfig } = params
+  const { userId, masterTemplateId, name, fieldValues, sectionConfig, folderId } = params
 
   const saved = await prisma.savedTemplate.create({
     data: {
@@ -67,6 +68,7 @@ export async function createSavedTemplate(params: {
       name,
       fieldValues: fieldValues as object,
       sectionConfig: sectionConfig as object,
+      ...(folderId ? { folderId } : {}),
     },
   })
 

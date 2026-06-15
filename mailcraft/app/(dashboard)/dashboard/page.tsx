@@ -6,9 +6,20 @@ export const metadata = {
   title: 'Dashboard — MailCraft',
 }
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: Promise<{ folder?: string }>
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await auth()
   if (!session) redirect('/login')
 
-  return <DashboardClient userName={session.user.name ?? 'there'} />
+  const { folder } = await searchParams
+
+  return (
+    <DashboardClient
+      userName={session.user.name ?? 'there'}
+      initialFolderId={folder ?? null}
+    />
+  )
 }

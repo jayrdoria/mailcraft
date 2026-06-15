@@ -64,7 +64,25 @@ export const PATCH = apiHandler(async (req, ctx) => {
   const parsed = updateSavedTemplateSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
-  const { name, fieldValues, sectionConfig } = parsed.data
+  const { name, fieldValues, sectionConfig, folderId } = parsed.data
+
+  // Reject duplicate names (only when name is actually changing)
+  if (name !== undefined && name !== existing.name) {
+    const nameConflict = await prisma.savedTemplate.findFirst({
+      where: { userId: session.user.id, name, NOT: { id } },
+      select: { id: true },
+    })
+    if (nameConflict) return apiError('A template with that name already exists', 409)
+  }
+
+  // Verify folderId belongs to this user (when provided and non-null)
+  if (folderId) {
+    const folder = await prisma.folder.findFirst({
+      where: { id: folderId, userId: session.user.id },
+      select: { id: true },
+    })
+    if (!folder) return apiError('Folder not found', 404)
+  }
 
   const updated = await prisma.savedTemplate.update({
     where: { id },
@@ -72,6 +90,7 @@ export const PATCH = apiHandler(async (req, ctx) => {
       ...(name !== undefined ? { name } : {}),
       ...(fieldValues !== undefined ? { fieldValues: fieldValues as object } : {}),
       ...(sectionConfig !== undefined ? { sectionConfig: sectionConfig as object } : {}),
+      ...(folderId !== undefined ? { folderId } : {}),
     },
     include: { masterTemplate: true },
   })
@@ -101,14 +120,18 @@ export const PATCH = apiHandler(async (req, ctx) => {
     }
   }
 
-  await activityService.log({
-    action: 'TEMPLATE_SAVED',
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? 'Unknown',
-    savedTemplateId: updated.id,
-    savedTemplateName: updated.name,
-    masterTemplateName: existing.masterTemplate.name,
-  })
+  // Only log content saves — not folder-only reorganisation
+  const isContentChange = name !== undefined || fieldValues !== undefined || sectionConfig !== undefined
+  if (isContentChange) {
+    await activityService.log({
+      action: 'TEMPLATE_SAVED',
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? 'Unknown',
+      savedTemplateId: updated.id,
+      savedTemplateName: updated.name,
+      masterTemplateName: existing.masterTemplate.name,
+    })
+  }
 
   return apiSuccess(updated)
 })

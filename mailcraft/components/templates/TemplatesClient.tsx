@@ -48,7 +48,11 @@ function BrandBadge({ brand }: { brand: BrandSlug }) {
   )
 }
 
-export default function TemplatesClient() {
+interface TemplatesClientProps {
+  folderId: string | null
+}
+
+export default function TemplatesClient({ folderId }: TemplatesClientProps) {
   const [search, setSearch] = useState('')
   const [brandFilter, setBrandFilter] = useState<BrandFilter>('ALL')
   const gridRef = useRef<HTMLDivElement>(null)
@@ -185,7 +189,7 @@ export default function TemplatesClient() {
                   </div>
                   <div className="pt-2 border-t">
                     <Link
-                      href={`/editor/new?master=${m.id}`}
+                      href={`/editor/new?master=${m.id}${folderId ? `&folder=${folderId}` : ''}`}
                       className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2
                                  text-xs font-medium rounded-md bg-primary text-primary-foreground
                                  hover:opacity-90 transition-opacity"

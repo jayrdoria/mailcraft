@@ -60,6 +60,7 @@ model User {
   templatesSharedByMe   SharedTemplate[] @relation("SharedBy")
   templatesSharedWithMe SharedTemplate[] @relation("SharedWith")
   activityLogs          ActivityLog[]
+  folders               Folder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -124,6 +125,9 @@ model SavedTemplate {
   // Base directory for rendered output files on VPS
   renderedBasePath String?
 
+  folderId String?
+  folder   Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
   sharedWith SharedTemplate[]
 
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -135,6 +139,26 @@ model SavedTemplate {
   @@index([userId])
   @@index([masterTemplateId])
   @@map("saved_templates")
+}
+
+// ─────────────────────────────────────────────
+// FOLDER
+// ─────────────────────────────────────────────
+
+model Folder {
+  id     String @id @default(cuid())
+  name   String
+  userId String
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templates SavedTemplate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("folders")
 }
 
 // ─────────────────────────────────────────────

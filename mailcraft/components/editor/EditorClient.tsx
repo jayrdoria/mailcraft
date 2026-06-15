@@ -2,7 +2,7 @@
 
 import { apiFetch } from '@/lib/apiFetch'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
@@ -11,6 +11,13 @@ import { toast } from 'sonner'
 import { ArrowLeft, Settings, Save, Loader2, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
+
+class DuplicateNameError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'DuplicateNameError'
+  }
+}
 
 function normalizeGroup(group: string): string {
   return group.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
@@ -51,6 +58,7 @@ interface EditorClientProps {
   supportedLanguages?: Language[]
   isImported?: boolean
   backHref?: string
+  initialFolderId?: string | null
 }
 
 export default function EditorClient({
@@ -64,6 +72,7 @@ export default function EditorClient({
   supportedLanguages = LANGUAGES,
   isImported = false,
   backHref = '/dashboard',
+  initialFolderId = null,
 }: EditorClientProps) {
   const router = useRouter()
   const qc = useQueryClient()
@@ -85,6 +94,62 @@ export default function EditorClient({
   const setIsSaving = useEditorStore((s) => s.setIsSaving)
   const markClean = useEditorStore((s) => s.markClean)
   const currentSavedId = useEditorStore((s) => s.savedTemplateId)
+  const [nameError, setNameError] = useState<string | null>(null)
+
+  const SIDEBAR_MIN = 280
+  const SIDEBAR_MAX = 600
+  const SIDEBAR_DEFAULT = 320
+  const [sidebarWidth, setSidebarWidth] = useState<number>(SIDEBAR_DEFAULT)
+  const [isResizing, setIsResizing] = useState(false)
+  const isDragging = useRef(false)
+  const dragStartX = useRef(0)
+  const dragStartWidth = useRef(0)
+
+  // Load persisted width after mount to avoid SSR/client hydration mismatch
+  useEffect(() => {
+    const stored = localStorage.getItem('editor-sidebar-width')
+    const parsed = stored ? parseInt(stored, 10) : NaN
+    if (!isNaN(parsed)) {
+      setSidebarWidth(Math.min(Math.max(parsed, SIDEBAR_MIN), SIDEBAR_MAX))
+    }
+  }, [])
+
+  // Global listeners — always attached, guarded by isDragging ref
+  useEffect(() => {
+    function cancelDrag() {
+      isDragging.current = false
+      setIsResizing(false)
+      setSidebarWidth((w) => {
+        localStorage.setItem('editor-sidebar-width', String(w))
+        return w
+      })
+    }
+    function onMove(e: MouseEvent) {
+      if (!isDragging.current) return
+      // Primary button no longer held (e.g. released outside window) — cancel
+      if (!(e.buttons & 1)) { cancelDrag(); return }
+      const next = Math.min(Math.max(dragStartWidth.current + e.clientX - dragStartX.current, SIDEBAR_MIN), SIDEBAR_MAX)
+      setSidebarWidth(next)
+    }
+    function onUp() {
+      if (!isDragging.current) return
+      cancelDrag()
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [])
+
+  function startSidebarResize(e: React.MouseEvent) {
+    e.preventDefault()
+    isDragging.current = true
+    dragStartX.current = e.clientX
+    dragStartWidth.current = sidebarWidth
+    setIsResizing(true)
+  }
 
   // Sections derived from field groups (all groups become toggleable in Configure)
   const allSections = (() => {
@@ -176,6 +241,7 @@ export default function EditorClient({
       masterTemplateId: string
       fieldValues: MultiLanguageFieldValues
       sectionConfig: SavedSectionConfig[]
+      folderId?: string
     }) => {
       const res = await apiFetch('/api/templates/saved', {
         method: 'POST',
@@ -184,6 +250,7 @@ export default function EditorClient({
       })
       if (!res.ok) {
         const json = await res.json()
+        if (res.status === 409) throw new DuplicateNameError(json.error ?? 'Duplicate name')
         throw new Error(json.error ?? 'Save failed')
       }
       return res.json()
@@ -197,7 +264,11 @@ export default function EditorClient({
       router.replace(`/editor/${json.data.id}`)
     },
     onError: (err: Error) => {
-      toast.error(err.message)
+      if (err.name === 'DuplicateNameError') {
+        setNameError(err.message)
+      } else {
+        toast.error(err.message)
+      }
       setIsSaving(false)
     },
   })
@@ -217,6 +288,7 @@ export default function EditorClient({
       })
       if (!res.ok) {
         const json = await res.json()
+        if (res.status === 409) throw new DuplicateNameError(json.error ?? 'Duplicate name')
         throw new Error(json.error ?? 'Save failed')
       }
       return res.json()
@@ -229,7 +301,11 @@ export default function EditorClient({
       setIsSaving(false)
     },
     onError: (err: Error) => {
-      toast.error(err.message)
+      if (err.name === 'DuplicateNameError') {
+        setNameError(err.message)
+      } else {
+        toast.error(err.message)
+      }
       setIsSaving(false)
     },
   })
@@ -272,6 +348,7 @@ export default function EditorClient({
         masterTemplateId: masterTemplate.id,
         fieldValues: fieldValuesToSave,
         sectionConfig: builtSectionConfig,
+        ...(initialFolderId ? { folderId: initialFolderId } : {}),
       })
     } else {
       updateMutation.mutate({
@@ -303,7 +380,7 @@ export default function EditorClient({
         />
       )}
 
-      <div className="fixed inset-0 z-[60] flex flex-col bg-background overflow-hidden">
+      <div className={cn('fixed inset-0 z-[60] flex flex-col bg-background overflow-hidden', isResizing && 'select-none')}>
         {/* Header */}
         <div
           ref={headerRef}
@@ -335,14 +412,26 @@ export default function EditorClient({
 
           {isOwner && (
             <>
-              <input
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="Template name…"
-                className="w-56 px-2.5 py-1.5 text-sm rounded-md border bg-background
-                           focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => { setTemplateName(e.target.value); setNameError(null) }}
+                  placeholder="Template name…"
+                  className={cn(
+                    'w-56 px-2.5 py-1.5 text-sm rounded-md border bg-background',
+                    'focus:outline-none focus:ring-2',
+                    nameError
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'focus:ring-ring'
+                  )}
+                />
+                {nameError && (
+                  <p className="absolute top-full left-0 mt-1 text-xs text-red-500 whitespace-nowrap bg-background px-1 rounded z-10">
+                    {nameError}
+                  </p>
+                )}
+              </div>
 
               <button
                 ref={setupGearRef}
@@ -378,7 +467,7 @@ export default function EditorClient({
         {/* Editor body: fields | preview */}
         <div className="flex flex-1 overflow-hidden">
           {/* Field editor */}
-          <div className="w-80 shrink-0 border-r flex flex-col overflow-hidden">
+          <div className="shrink-0 flex flex-col overflow-hidden" style={{ width: sidebarWidth }}>
             <FieldEditor
               editableFields={masterTemplate.editableFields}
               sectionConfig={currentSectionConfig}
@@ -390,6 +479,24 @@ export default function EditorClient({
                 <TemplateActivityLog savedTemplateId={effectiveSavedId} />
               </div>
             )}
+          </div>
+
+          {/* Resize handle */}
+          <div
+            onMouseDown={startSidebarResize}
+            className={cn(
+              'relative w-3 shrink-0 flex items-center justify-center cursor-col-resize group transition-colors',
+              isResizing ? 'bg-primary/15' : 'hover:bg-primary/10'
+            )}
+          >
+            <div className={cn(
+              'flex flex-col gap-[3px] pointer-events-none transition-opacity',
+              isResizing ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'
+            )}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className={cn('w-[3px] h-[3px] rounded-full transition-colors', isResizing ? 'bg-primary' : 'bg-muted-foreground group-hover:bg-primary')} />
+              ))}
+            </div>
           </div>
 
           {/* Preview + export */}

@@ -76,6 +76,7 @@ export const createSavedTemplateSchema = z.object({
     .optional()
     .default({ en: {}, fr: {}, frca: {}, de: {}, it: {}, es: {} }),
   sectionConfig: z.array(savedSectionConfigSchema).optional().default([]),
+  folderId:      z.string().cuid().nullable().optional(),
 })
 
 export const updateSavedTemplateSchema = z.object({
@@ -84,6 +85,19 @@ export const updateSavedTemplateSchema = z.object({
     .record(languageSchema, z.record(z.string(), fieldValueSchema))
     .optional(),
   sectionConfig: z.array(savedSectionConfigSchema).optional(),
+  folderId:      z.string().cuid().nullable().optional(),
+})
+
+// ─────────────────────────────────────────────
+// Folders
+// ─────────────────────────────────────────────
+
+export const createFolderSchema = z.object({
+  name: z.string().min(1).max(100).trim(),
+})
+
+export const updateFolderSchema = z.object({
+  name: z.string().min(1).max(100).trim(),
 })
 
 // ─────────────────────────────────────────────

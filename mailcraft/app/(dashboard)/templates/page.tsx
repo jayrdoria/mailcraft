@@ -4,7 +4,13 @@ export const metadata = {
   title: 'Browse Templates — MailCraft',
 }
 
-export default function TemplatesPage() {
+interface TemplatesPageProps {
+  searchParams: Promise<{ folder?: string }>
+}
+
+export default async function TemplatesPage({ searchParams }: TemplatesPageProps) {
+  const { folder } = await searchParams
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
@@ -13,7 +19,7 @@ export default function TemplatesPage() {
           Choose a master template to start editing
         </p>
       </div>
-      <TemplatesClient />
+      <TemplatesClient folderId={folder ?? null} />
     </div>
   )
 }

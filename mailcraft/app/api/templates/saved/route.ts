@@ -84,7 +84,23 @@ export const POST = apiHandler(async (req) => {
   const parsed = createSavedTemplateSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
-  const { name, masterTemplateId, fieldValues, sectionConfig } = parsed.data
+  const { name, masterTemplateId, fieldValues, sectionConfig, folderId } = parsed.data
+
+  // Reject duplicate names per user
+  const nameConflict = await prisma.savedTemplate.findFirst({
+    where: { userId: session.user.id, name },
+    select: { id: true },
+  })
+  if (nameConflict) return apiError('A template with that name already exists', 409)
+
+  // Verify folderId belongs to this user
+  if (folderId) {
+    const folder = await prisma.folder.findFirst({
+      where: { id: folderId, userId: session.user.id },
+      select: { id: true },
+    })
+    if (!folder) return apiError('Folder not found', 404)
+  }
 
   const master = await getMasterTemplateById(masterTemplateId)
   if (!master || !master.isActive) return apiError('Master template not found', 404)
@@ -123,6 +139,7 @@ export const POST = apiHandler(async (req) => {
     name,
     fieldValues: initialFieldValues,
     sectionConfig: sectionConfig as SavedSectionConfig[],
+    folderId,
   })
 
   // Render all languages to disk (best-effort — HTML files may not exist yet in dev)

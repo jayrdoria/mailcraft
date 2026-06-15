@@ -58,6 +58,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
   if (!saved) redirect('/dashboard')
 
   const isOwner = saved.userId === session.user.id || isAdmin
+  const templateFolderId = (saved as unknown as { folderId?: string | null }).folderId ?? null
   const editableFields = saved.masterTemplate.editableFields as unknown as TemplateFieldConfig[]
   const lockedFields = saved.masterTemplate.lockedFields as unknown as LockedFieldConfig[]
   const fieldValues = saved.fieldValues as unknown as MultiLanguageFieldValues
@@ -102,7 +103,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
       isOwner={isOwner}
       supportedLanguages={supportedLanguages}
       isImported={isImported}
-      backHref={isImported ? '/imports' : '/dashboard'}
+      backHref={isImported ? '/imports' : templateFolderId ? `/dashboard?folder=${templateFolderId}` : '/dashboard'}
     />
   )
 }

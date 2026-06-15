@@ -20,11 +20,25 @@ export const POST = apiHandler(async (_req, ctx) => {
   })
   if (!source) return apiError('Template not found', 404)
 
+  // Resolve a unique name: "Copy of X" → "Copy of X (2)" → "Copy of X (3)" …
+  const baseName = `Copy of ${source.name}`
+  const existing = await prisma.savedTemplate.findMany({
+    where: { userId: session.user.id, name: { startsWith: baseName } },
+    select: { name: true },
+  })
+  const takenNames = new Set(existing.map((t) => t.name))
+  let candidateName = baseName
+  let counter = 2
+  while (takenNames.has(candidateName)) {
+    candidateName = `${baseName} (${counter})`
+    counter++
+  }
+
   const copy = await prisma.savedTemplate.create({
     data: {
       userId: session.user.id,
       masterTemplateId: source.masterTemplateId,
-      name: `Copy of ${source.name}`,
+      name: candidateName,
       fieldValues: source.fieldValues ?? {},
       sectionConfig: source.sectionConfig ?? [],
     },

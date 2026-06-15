@@ -18,7 +18,7 @@ export const metadata = {
 }
 
 interface NewEditorPageProps {
-  searchParams: Promise<{ master?: string }>
+  searchParams: Promise<{ master?: string; folder?: string }>
 }
 
 function injectLockedFields(html: string, lockedFields: LockedFieldConfig[]): string {
@@ -34,7 +34,7 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
   const session = await auth()
   if (!session) redirect('/login')
 
-  const { master: masterId } = await searchParams
+  const { master: masterId, folder: folderId } = await searchParams
   if (!masterId) redirect('/templates')
 
   const masterTemplate = await getMasterTemplateById(masterId)
@@ -107,7 +107,8 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
       isOwner={true}
       supportedLanguages={supportedLanguages}
       isImported={isImported}
-      backHref={isImported ? '/imports' : '/dashboard'}
+      backHref={isImported ? '/imports' : folderId ? `/dashboard?folder=${folderId}` : '/dashboard'}
+      initialFolderId={folderId ?? null}
     />
   )
 }
