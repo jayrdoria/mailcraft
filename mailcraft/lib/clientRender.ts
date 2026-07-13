@@ -1,5 +1,8 @@
-import type { SavedSectionConfig, FieldValue } from '@/lib/types/template'
+import type { SavedSectionConfig, FieldValue, Language } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRenderer'
+import { renderBlocksById } from '@/lib/services/blockRenderer'
+import { composeLayout } from '@/lib/layoutComposer'
 
 // ─────────────────────────────────────────────
 // Token injection
@@ -99,14 +102,33 @@ export function parseSectionNames(html: string): { name: string; label: string }
 // sectionConfig: current section state
 // ─────────────────────────────────────────────
 
+export interface ClientRenderBlocks {
+  customBlocks?: CustomBlock[] | null
+  layoutOrder?: LayoutOrder | null
+  lang?: Language
+}
+
 export function clientRender(
   masterPreviewHtml: string,
   fieldValues: Record<string, FieldValue>,
   sectionConfig: SavedSectionConfig[],
   brand = 'STAKES',
-  alignment: BodyAlignment = 'center'
+  alignment: BodyAlignment = 'center',
+  blocks?: ClientRenderBlocks
 ): string {
-  let html = applySectionConfig(masterPreviewHtml, sectionConfig)
+  let html = masterPreviewHtml
+
+  // Compose layout — reorder sections + inject custom blocks — while SECTION
+  // markers are intact (before delete/token injection). No-op when no layoutOrder.
+  if (blocks?.layoutOrder && blocks.layoutOrder.length > 0) {
+    const rendered = renderBlocksById(blocks.customBlocks ?? [], blocks.lang ?? 'en', {
+      brand,
+      sanitize: false, // preview mirrors legacy raw injection
+    })
+    html = composeLayout(html, blocks.layoutOrder, rendered)
+  }
+
+  html = applySectionConfig(html, sectionConfig)
   html = injectTokens(html, fieldValues, brand, alignment)
   return html
 }

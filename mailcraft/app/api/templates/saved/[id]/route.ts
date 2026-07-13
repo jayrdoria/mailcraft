@@ -11,6 +11,7 @@ import type {
   LockedFieldConfig,
   TemplateFieldConfig,
 } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -64,7 +65,7 @@ export const PATCH = apiHandler(async (req, ctx) => {
   const parsed = updateSavedTemplateSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
-  const { name, fieldValues, sectionConfig, folderId } = parsed.data
+  const { name, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId } = parsed.data
 
   // Reject duplicate names (only when name is actually changing)
   if (name !== undefined && name !== existing.name) {
@@ -90,6 +91,8 @@ export const PATCH = apiHandler(async (req, ctx) => {
       ...(name !== undefined ? { name } : {}),
       ...(fieldValues !== undefined ? { fieldValues: fieldValues as object } : {}),
       ...(sectionConfig !== undefined ? { sectionConfig: sectionConfig as object } : {}),
+      ...(customBlocks !== undefined ? { customBlocks: customBlocks as object } : {}),
+      ...(layoutOrder !== undefined ? { layoutOrder: layoutOrder as object } : {}),
       ...(folderId !== undefined ? { folderId } : {}),
     },
     include: { masterTemplate: true },
@@ -98,7 +101,14 @@ export const PATCH = apiHandler(async (req, ctx) => {
   // Re-render all languages to disk (best-effort)
   if (updated.renderedBasePath && (fieldValues !== undefined || sectionConfig !== undefined)) {
     const master = updated.masterTemplate
-    const transformer = buildSectionTransformer(updated.sectionConfig as unknown as SavedSectionConfig[])
+    const transformer = buildSectionTransformer(
+      updated.sectionConfig as unknown as SavedSectionConfig[],
+      {
+        customBlocks: updated.customBlocks as unknown as CustomBlock[] | null,
+        layoutOrder: updated.layoutOrder as unknown as LayoutOrder | null,
+        brand: master.brand,
+      }
+    )
     try {
       await Promise.all(
         LANGUAGES.map((lang) =>
@@ -121,7 +131,12 @@ export const PATCH = apiHandler(async (req, ctx) => {
   }
 
   // Only log content saves — not folder-only reorganisation
-  const isContentChange = name !== undefined || fieldValues !== undefined || sectionConfig !== undefined
+  const isContentChange =
+    name !== undefined ||
+    fieldValues !== undefined ||
+    sectionConfig !== undefined ||
+    customBlocks !== undefined ||
+    layoutOrder !== undefined
   if (isContentChange) {
     await activityService.log({
       action: 'TEMPLATE_SAVED',

@@ -12,6 +12,7 @@ import type {
   TemplateFieldConfig,
   Language,
 } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 
 // GET /api/templates/saved — list current user's saved templates + shared with me
 export const GET = apiHandler(async () => {
@@ -84,7 +85,7 @@ export const POST = apiHandler(async (req) => {
   const parsed = createSavedTemplateSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
-  const { name, masterTemplateId, fieldValues, sectionConfig, folderId } = parsed.data
+  const { name, masterTemplateId, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId } = parsed.data
 
   // Reject duplicate names per user
   const nameConflict = await prisma.savedTemplate.findFirst({
@@ -139,13 +140,22 @@ export const POST = apiHandler(async (req) => {
     name,
     fieldValues: initialFieldValues,
     sectionConfig: sectionConfig as SavedSectionConfig[],
+    customBlocks,
+    layoutOrder,
     folderId,
   })
 
   // Render all languages to disk (best-effort — HTML files may not exist yet in dev)
   if (saved.renderedBasePath) {
     try {
-      const transformer = buildSectionTransformer(saved.sectionConfig as unknown as SavedSectionConfig[])
+      const transformer = buildSectionTransformer(
+        saved.sectionConfig as unknown as SavedSectionConfig[],
+        {
+          customBlocks: saved.customBlocks as unknown as CustomBlock[] | null,
+          layoutOrder: saved.layoutOrder as unknown as LayoutOrder | null,
+          brand: master.brand,
+        }
+      )
       await Promise.all(
         activeLangs.map((lang) =>
           renderAndSaveAllLanguages({

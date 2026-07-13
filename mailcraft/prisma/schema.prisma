@@ -122,6 +122,14 @@ model SavedTemplate {
   // JSON: SavedSectionConfig[] — section on/off state, same for all languages
   sectionConfig Json
 
+  // JSON: CustomBlock[] — user-added blocks layered on top of the master (MailCraft Blocks).
+  // Null = legacy template with no custom blocks (renders identically to before).
+  customBlocks Json?
+
+  // JSON: LayoutItem[] — interleaved order of master sections + custom blocks.
+  // Null = legacy order: master sections in source order, no blocks.
+  layoutOrder Json?
+
   // Base directory for rendered output files on VPS
   renderedBasePath String?
 

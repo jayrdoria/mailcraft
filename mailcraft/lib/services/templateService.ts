@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import type { MultiLanguageFieldValues, SavedSectionConfig } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { getSavedTemplatePath } from '@/lib/services/fileService'
 import { redis, CacheKeys } from '@/lib/redis'
 
@@ -57,9 +58,11 @@ export async function createSavedTemplate(params: {
   name: string
   fieldValues: MultiLanguageFieldValues
   sectionConfig: SavedSectionConfig[]
+  customBlocks?: CustomBlock[]
+  layoutOrder?: LayoutOrder
   folderId?: string | null
 }) {
-  const { userId, masterTemplateId, name, fieldValues, sectionConfig, folderId } = params
+  const { userId, masterTemplateId, name, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId } = params
 
   const saved = await prisma.savedTemplate.create({
     data: {
@@ -68,6 +71,8 @@ export async function createSavedTemplate(params: {
       name,
       fieldValues: fieldValues as object,
       sectionConfig: sectionConfig as object,
+      ...(customBlocks !== undefined ? { customBlocks: customBlocks as object } : {}),
+      ...(layoutOrder !== undefined ? { layoutOrder: layoutOrder as object } : {}),
       ...(folderId ? { folderId } : {}),
     },
   })

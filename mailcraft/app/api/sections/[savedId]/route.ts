@@ -10,6 +10,7 @@ import type {
   LockedFieldConfig,
   TemplateFieldConfig,
 } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 
 interface RouteContext {
   params: Promise<{ savedId: string }>
@@ -26,9 +27,18 @@ async function rerender(saved: {
   }
   fieldValues: unknown
   sectionConfig: unknown
+  customBlocks: unknown
+  layoutOrder: unknown
 }) {
   if (!saved.renderedBasePath) return
-  const transformer = buildSectionTransformer(saved.sectionConfig as unknown as SavedSectionConfig[])
+  const transformer = buildSectionTransformer(
+    saved.sectionConfig as unknown as SavedSectionConfig[],
+    {
+      customBlocks: saved.customBlocks as unknown as CustomBlock[] | null,
+      layoutOrder: saved.layoutOrder as unknown as LayoutOrder | null,
+      brand: saved.masterTemplate.brand,
+    }
+  )
   try {
     await Promise.all(
       LANGUAGES.map((lang) =>

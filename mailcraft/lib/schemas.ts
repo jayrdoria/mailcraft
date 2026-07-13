@@ -44,6 +44,50 @@ export const savedSectionConfigSchema = z.object({
 })
 
 // ─────────────────────────────────────────────
+// Custom blocks + layout order (MailCraft Blocks)
+// ─────────────────────────────────────────────
+
+export const blockTypeSchema = z.enum(['text', 'image', 'button', 'divider', 'spacer', 'columns'])
+
+export const blockContentSchema = z.object({
+  html:  z.string().optional(),
+  src:   z.string().optional(),
+  alt:   z.string().optional(),
+  href:  z.string().optional(),
+  label: z.string().optional(),
+})
+
+export const blockPropsSchema = z.object({
+  align:            z.enum(['left', 'center', 'right']).optional(),
+  paddingTop:       z.number().optional(),
+  paddingBottom:    z.number().optional(),
+  backgroundColor:  z.string().optional(),
+  fontSize:         z.number().optional(),
+  textColor:        z.string().optional(),
+  width:            z.number().optional(),
+  buttonColor:      z.string().optional(),
+  buttonTextColor:  z.string().optional(),
+  borderRadius:     z.number().optional(),
+  lineColor:        z.string().optional(),
+  lineThickness:    z.number().optional(),
+  height:           z.number().optional(),
+})
+
+export const customBlockSchema = z.object({
+  id:      z.string().min(1),
+  type:    blockTypeSchema,
+  props:   blockPropsSchema,
+  content: z.record(languageSchema, blockContentSchema),
+})
+
+export const layoutItemSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('section'), name: z.string().min(1) }),
+  z.object({ kind: z.literal('block'),   id:   z.string().min(1) }),
+])
+
+export const layoutOrderSchema = z.array(layoutItemSchema)
+
+// ─────────────────────────────────────────────
 // Master templates
 // ─────────────────────────────────────────────
 
@@ -76,6 +120,8 @@ export const createSavedTemplateSchema = z.object({
     .optional()
     .default({ en: {}, fr: {}, frca: {}, de: {}, it: {}, es: {} }),
   sectionConfig: z.array(savedSectionConfigSchema).optional().default([]),
+  customBlocks:  z.array(customBlockSchema).optional(),
+  layoutOrder:   layoutOrderSchema.optional(),
   folderId:      z.string().cuid().nullable().optional(),
 })
 
@@ -85,6 +131,8 @@ export const updateSavedTemplateSchema = z.object({
     .record(languageSchema, z.record(z.string(), fieldValueSchema))
     .optional(),
   sectionConfig: z.array(savedSectionConfigSchema).optional(),
+  customBlocks:  z.array(customBlockSchema).optional(),
+  layoutOrder:   layoutOrderSchema.optional(),
   folderId:      z.string().cuid().nullable().optional(),
 })
 

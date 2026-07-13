@@ -8,6 +8,7 @@ import type {
   LockedFieldConfig,
   TemplateFieldConfig,
 } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 
 interface RouteContext {
   params: Promise<{ userId: string; templateId: string }>
@@ -49,8 +50,15 @@ export const GET = apiHandler(async (req, ctx) => {
     return apiError(`Master HTML file not found for language "${lang}"`, 404)
   }
 
-  const transformer = buildSectionTransformer(saved.sectionConfig as unknown as SavedSectionConfig[])
-  html = transformer(html)
+  const transformer = buildSectionTransformer(
+    saved.sectionConfig as unknown as SavedSectionConfig[],
+    {
+      customBlocks: saved.customBlocks as unknown as CustomBlock[] | null,
+      layoutOrder: saved.layoutOrder as unknown as LayoutOrder | null,
+      brand: master.brand,
+    }
+  )
+  html = transformer(html, lang)
 
   return apiSuccess({ html, lang, templateName: saved.name })
 })

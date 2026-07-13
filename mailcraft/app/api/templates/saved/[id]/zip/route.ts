@@ -11,6 +11,7 @@ import type {
   TemplateFieldConfig,
   Language,
 } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import JSZip from 'jszip'
 
 interface RouteContext {
@@ -43,7 +44,14 @@ export const GET = apiHandler(async (_req, ctx) => {
   const masterRaw = master as unknown as { languages?: unknown }
   const masterLanguages = (masterRaw.languages as Language[]) ?? []
   const activeLangs: Language[] = masterLanguages.length > 0 ? masterLanguages : LANGUAGES
-  const transformer = buildSectionTransformer(saved.sectionConfig as unknown as SavedSectionConfig[])
+  const transformer = buildSectionTransformer(
+    saved.sectionConfig as unknown as SavedSectionConfig[],
+    {
+      customBlocks: saved.customBlocks as unknown as CustomBlock[] | null,
+      layoutOrder: saved.layoutOrder as unknown as LayoutOrder | null,
+      brand: master.brand,
+    }
+  )
   const zip = new JSZip()
 
   // Slug for the folder name inside zip
@@ -65,7 +73,7 @@ export const GET = apiHandler(async (_req, ctx) => {
         editableFields: master.editableFields as unknown as TemplateFieldConfig[],
         fieldValues: saved.fieldValues as unknown as MultiLanguageFieldValues,
       })
-      folder.file(`${lang}.html`, cleanHtml(transformer(html)))
+      folder.file(`${lang}.html`, cleanHtml(transformer(html, lang)))
     })
   )
 

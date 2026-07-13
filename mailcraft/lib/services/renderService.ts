@@ -7,22 +7,51 @@ import type {
   FieldValue,
 } from '@/lib/types/template'
 import { LANGUAGES } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { readTemplateHtml, writeTemplateHtml } from '@/lib/services/fileService'
 import { deleteSection } from '@/lib/services/sectionService'
+import { renderBlocksById } from '@/lib/services/blockRenderer'
+import { composeLayout } from '@/lib/layoutComposer'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRenderer'
 import { escapeHtml, sanitizeUrl } from '@/lib/utils/escapeHtml'
 
 // ─────────────────────────────────────────────
 // Section config transformer
-// Applies sectionConfig (disable/delete) to rendered HTML
+// Applies layout composition (reorder sections + inject custom blocks) then
+// sectionConfig (delete) to rendered HTML.
+//
+// Language-aware: the returned fn takes (html, lang) because custom-block
+// content is per-language. lang defaults to 'en' for legacy callers.
+//
+// blockCtx is optional — without a layoutOrder the transformer behaves exactly
+// as before (delete disabled sections only), so legacy templates are unchanged.
 // ─────────────────────────────────────────────
 
+export interface BlockRenderContext {
+  customBlocks?: CustomBlock[] | null
+  layoutOrder?: LayoutOrder | null
+  brand?: string
+}
+
 export function buildSectionTransformer(
-  sectionConfig: SavedSectionConfig[]
-): (html: string) => string {
-  return (html: string): string => {
+  sectionConfig: SavedSectionConfig[],
+  blockCtx?: BlockRenderContext
+): (html: string, lang?: Language) => string {
+  return (html: string, lang: Language = 'en'): string => {
     let result = html
+
+    // 1. Compose layout — reorder sections + inject rendered blocks at boundaries.
+    //    Runs while SECTION markers are intact so the delete step below still matches.
+    if (blockCtx?.layoutOrder && blockCtx.layoutOrder.length > 0) {
+      const rendered = renderBlocksById(blockCtx.customBlocks ?? [], lang, {
+        brand: blockCtx.brand,
+        sanitize: true,
+      })
+      result = composeLayout(result, blockCtx.layoutOrder, rendered)
+    }
+
+    // 2. Delete permanently-removed sections.
     for (const section of sectionConfig) {
       if (section.isDeleted) {
         result = deleteSection(result, section.name)
@@ -179,7 +208,7 @@ export async function renderAndSaveAllLanguages(params: {
   lockedFields: LockedFieldConfig[]
   editableFields: TemplateFieldConfig[]
   fieldValues: MultiLanguageFieldValues
-  sectionTransformer?: (html: string) => string
+  sectionTransformer?: (html: string, lang?: Language) => string
 }): Promise<void> {
   const {
     masterTemplateId,
@@ -204,7 +233,7 @@ export async function renderAndSaveAllLanguages(params: {
   })
 
   if (sectionTransformer) {
-    html = sectionTransformer(html)
+    html = sectionTransformer(html, lang)
   }
 
   await writeTemplateHtml(savedBaseFilePath, lang, html)
