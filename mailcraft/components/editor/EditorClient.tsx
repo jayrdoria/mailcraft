@@ -33,10 +33,12 @@ const SECTION_DESCRIPTIONS: Record<string, string> = {
 }
 import SetupModal from './SetupModal'
 import FieldEditor from './FieldEditor'
+import BlocksPanel from './BlocksPanel'
 import LivePreview from './LivePreview'
 import ExportButtons from './ExportButtons'
 import TemplateActivityLog from './TemplateActivityLog'
 import type { TemplateFieldConfig, SavedSectionConfig, MultiLanguageFieldValues, Language } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { LANGUAGES } from '@/lib/types/template'
 import type { SetupConfig } from '@/lib/stores/editorStore'
 
@@ -53,6 +55,8 @@ interface EditorClientProps {
   savedTemplateName: string
   fieldValues: MultiLanguageFieldValues
   sectionConfig: SavedSectionConfig[]
+  customBlocks?: CustomBlock[] | null
+  layoutOrder?: LayoutOrder | null
   masterPreviewHtml: string
   isOwner: boolean
   supportedLanguages?: Language[]
@@ -67,6 +71,8 @@ export default function EditorClient({
   savedTemplateName,
   fieldValues,
   sectionConfig,
+  customBlocks = null,
+  layoutOrder = null,
   masterPreviewHtml,
   isOwner,
   supportedLanguages = LANGUAGES,
@@ -89,12 +95,15 @@ export default function EditorClient({
   const activeSections = useEditorStore((s) => s.activeSections)
   const deletedSections = useEditorStore((s) => s.deletedSections)
   const storeFieldValues = useEditorStore((s) => s.fieldValues)
+  const storeCustomBlocks = useEditorStore((s) => s.customBlocks)
+  const storeLayoutOrder = useEditorStore((s) => s.layoutOrder)
   const isDirty = useEditorStore((s) => s.isDirty)
   const isSaving = useEditorStore((s) => s.isSaving)
   const setIsSaving = useEditorStore((s) => s.setIsSaving)
   const markClean = useEditorStore((s) => s.markClean)
   const currentSavedId = useEditorStore((s) => s.savedTemplateId)
   const [nameError, setNameError] = useState<string | null>(null)
+  const [sidebarTab, setSidebarTab] = useState<'content' | 'blocks'>('content')
 
   const SIDEBAR_MIN = 280
   const SIDEBAR_MAX = 600
@@ -188,6 +197,8 @@ export default function EditorClient({
       supportedLanguages,
       openSetupModal: !isImported && sectionConfig.length === 0 && allSections.length > 0,
       allSectionNames: allSections.map((s) => s.name),
+      customBlocks,
+      layoutOrder,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -241,6 +252,8 @@ export default function EditorClient({
       masterTemplateId: string
       fieldValues: MultiLanguageFieldValues
       sectionConfig: SavedSectionConfig[]
+      customBlocks: CustomBlock[]
+      layoutOrder: LayoutOrder
       folderId?: string
     }) => {
       const res = await apiFetch('/api/templates/saved', {
@@ -279,6 +292,8 @@ export default function EditorClient({
       name?: string
       fieldValues?: MultiLanguageFieldValues
       sectionConfig?: SavedSectionConfig[]
+      customBlocks?: CustomBlock[]
+      layoutOrder?: LayoutOrder
     }) => {
       const id = currentSavedId ?? savedTemplateId
       const res = await apiFetch(`/api/templates/saved/${id}`, {
@@ -348,6 +363,8 @@ export default function EditorClient({
         masterTemplateId: masterTemplate.id,
         fieldValues: fieldValuesToSave,
         sectionConfig: builtSectionConfig,
+        customBlocks: storeCustomBlocks,
+        layoutOrder: storeLayoutOrder,
         ...(initialFolderId ? { folderId: initialFolderId } : {}),
       })
     } else {
@@ -355,6 +372,8 @@ export default function EditorClient({
         name: templateName,
         fieldValues: fieldValuesToSave,
         sectionConfig: builtSectionConfig,
+        customBlocks: storeCustomBlocks,
+        layoutOrder: storeLayoutOrder,
       })
     }
   }
@@ -468,10 +487,36 @@ export default function EditorClient({
         <div className="flex flex-1 overflow-hidden">
           {/* Field editor */}
           <div className="shrink-0 flex flex-col overflow-hidden" style={{ width: sidebarWidth }}>
-            <FieldEditor
-              editableFields={masterTemplate.editableFields}
-              sectionConfig={currentSectionConfig}
-            />
+            {/* Sidebar tab switch */}
+            <div className="flex shrink-0 border-b bg-card">
+              {(['content', 'blocks'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setSidebarTab(tab)}
+                  className={cn(
+                    'flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer capitalize',
+                    sidebarTab === tab
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {tab === 'blocks' ? 'Blocks' : 'Content'}
+                </button>
+              ))}
+            </div>
+
+            {/* Content tab — kept mounted (drives the live preview) even when hidden */}
+            <div className={cn('flex-1 flex flex-col overflow-hidden', sidebarTab !== 'content' && 'hidden')}>
+              <FieldEditor
+                editableFields={masterTemplate.editableFields}
+                sectionConfig={currentSectionConfig}
+              />
+            </div>
+
+            {/* Blocks tab */}
+            <div className={cn('flex-1 flex flex-col overflow-hidden', sidebarTab !== 'blocks' && 'hidden')}>
+              <BlocksPanel sectionConfig={currentSectionConfig} />
+            </div>
 
             {/* Activity log at bottom of field column */}
             {effectiveSavedId && (

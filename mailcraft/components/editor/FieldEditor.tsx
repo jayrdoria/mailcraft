@@ -8,6 +8,7 @@ import { clientRender } from '@/lib/clientRender'
 import ParagraphEditor from '@/components/editor/ParagraphEditor'
 import RichTextEditor from '@/components/editor/RichTextEditor'
 import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue, BodyParagraph } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { LANGUAGE_LABELS, LANGUAGES } from '@/lib/types/template'
 
 function normalizeGroup(group: string): string {
@@ -76,6 +77,8 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const bodyAlignment = useEditorStore((s) => s.bodyAlignment)
   const setBodyAlignment = useEditorStore((s) => s.setBodyAlignment)
   const setFieldValueAllLanguages = useEditorStore((s) => s.setFieldValueAllLanguages)
+  const customBlocks = useEditorStore((s) => s.customBlocks)
+  const layoutOrder = useEditorStore((s) => s.layoutOrder)
 
   // Session-only: tracks which url fields are synced across all languages
   const [syncedFields, setSyncedFields] = useState<Set<string>>(new Set())
@@ -111,8 +114,17 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
 
   // Debounced preview update
   const updatePreview = useDebounce(
-    (html: string, values: Record<string, FieldValue>, sc: SavedSectionConfig[], br: string, align: 'center' | 'left') => {
-      const rendered = clientRender(html, values, sc, br, align)
+    (
+      html: string,
+      values: Record<string, FieldValue>,
+      sc: SavedSectionConfig[],
+      br: string,
+      align: 'center' | 'left',
+      blocks: CustomBlock[],
+      layout: LayoutOrder,
+      lang: Language,
+    ) => {
+      const rendered = clientRender(html, values, sc, br, align, { customBlocks: blocks, layoutOrder: layout, lang })
       setRenderedHtml(rendered)
     },
     300
@@ -121,9 +133,9 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const currentLangValues = fieldValues[activeLanguage] ?? {}
 
   useEffect(() => {
-    updatePreview(masterPreviewHtml, currentLangValues, currentSectionConfig, brand, bodyAlignment)
+    updatePreview(masterPreviewHtml, currentLangValues, currentSectionConfig, brand, bodyAlignment, customBlocks, layoutOrder, activeLanguage)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterPreviewHtml, fieldValues, activeSections, deletedSections, activeLanguage, bodyAlignment])
+  }, [masterPreviewHtml, fieldValues, activeSections, deletedSections, activeLanguage, bodyAlignment, customBlocks, layoutOrder])
 
   // Fields grouped by section
   const fieldsBySectionName = editableFields.reduce<Record<string, TemplateFieldConfig[]>>(

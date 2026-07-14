@@ -69,32 +69,41 @@ export function composeLayout(
   const matches = findSections(html)
   if (matches.length === 0) return html
 
-  const first = matches[0].start
-  const last = matches[matches.length - 1].end
-  const preamble = html.slice(0, first)
-  const postamble = html.slice(last)
+  // Build a "unit" per section: from its START marker up to (but not including)
+  // the next section's START — so any inter-section content (dividers, spacers
+  // that live BETWEEN section markers) travels with the preceding section and is
+  // never dropped. The last section's unit ends at its own END; whatever follows
+  // is postamble. In source order this reconstructs the original byte-for-byte.
+  const preamble = html.slice(0, matches[0].start)
+  const postamble = html.slice(matches[matches.length - 1].end)
 
-  const sectionMap = new Map(matches.map((s) => [s.name, s.full]))
+  const unitMap = new Map<string, string>()
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].start
+    const unitEnd = i < matches.length - 1 ? matches[i + 1].start : matches[i].end
+    unitMap.set(matches[i].name, html.slice(start, unitEnd))
+  }
+
   const used = new Set<string>()
   const parts: string[] = []
 
   for (const item of layoutOrder) {
     if (item.kind === 'section') {
-      const block = sectionMap.get(item.name)
-      if (block && !used.has(item.name)) {
-        parts.push(block)
+      const unit = unitMap.get(item.name)
+      if (unit !== undefined && !used.has(item.name)) {
+        parts.push(unit)
         used.add(item.name)
       }
     } else {
       const rendered = renderedBlocks[item.id]
-      if (rendered) parts.push(rendered)
+      if (rendered) parts.push('\n' + rendered + '\n')
     }
   }
 
   // Safety net: never drop a master section that wasn't referenced in layoutOrder.
   for (const s of matches) {
-    if (!used.has(s.name)) parts.push(s.full)
+    if (!used.has(s.name)) parts.push(unitMap.get(s.name)!)
   }
 
-  return preamble + '\n' + parts.join('\n') + '\n' + postamble
+  return preamble + parts.join('') + postamble
 }

@@ -7,6 +7,64 @@ import type {
 } from '@/lib/types/template'
 import { LANGUAGES } from '@/lib/types/template'
 import type { BodyAlignment } from '@/lib/paragraphRenderer'
+import type { CustomBlock, LayoutOrder, BlockType, BlockContent, BlockProps } from '@/lib/types/blocks'
+import { deriveDefaultLayout } from '@/lib/layoutComposer'
+
+// ─────────────────────────────────────────────
+// Block factory — sensible defaults per type.
+// Defaults assume the dark master theme (white text / transparent bg);
+// users adjust colours in the block editor.
+// ─────────────────────────────────────────────
+
+function makeBlock(type: BlockType): CustomBlock {
+  const id = 'blk_' + crypto.randomUUID().slice(0, 8)
+  switch (type) {
+    case 'text':
+      return { id, type, props: { align: 'center', fontSize: 15, textColor: '#ffffff', paddingTop: 12, paddingBottom: 12 }, content: { en: { html: '<p>New text</p>' } } }
+    case 'image':
+      return { id, type, props: { align: 'center', width: 560, paddingTop: 12, paddingBottom: 12 }, content: { en: { src: '', alt: '', href: '' } } }
+    case 'button':
+      return { id, type, props: { align: 'center', buttonColor: '#ef5e5e', buttonTextColor: '#ffffff', borderRadius: 4, paddingTop: 16, paddingBottom: 16 }, content: { en: { label: 'Click here', href: '' } } }
+    case 'divider':
+      return { id, type, props: { lineColor: '#333333', lineThickness: 1, paddingTop: 16, paddingBottom: 16 }, content: { en: {} } }
+    case 'spacer':
+      return { id, type, props: { height: 24 }, content: { en: {} } }
+    case 'columns':
+      return { id, type, props: {}, content: { en: {} } } // Phase 9
+  }
+}
+
+// Reconcile a saved layoutOrder against the current master sections + blocks:
+// drop stale section/block refs, append any master sections missing from the
+// saved order (so newly added master sections still appear).
+function buildInitialLayout(
+  masterPreviewHtml: string,
+  savedLayout: LayoutOrder | null | undefined,
+  blocks: CustomBlock[]
+): LayoutOrder {
+  const masterSections = deriveDefaultLayout(masterPreviewHtml)
+  if (!savedLayout || savedLayout.length === 0) return masterSections
+
+  const masterNames = new Set(masterSections.map((s) => (s.kind === 'section' ? s.name : '')))
+  const blockIds = new Set(blocks.map((b) => b.id))
+  const seenSections = new Set<string>()
+  const items: LayoutOrder = []
+
+  for (const item of savedLayout) {
+    if (item.kind === 'section') {
+      if (masterNames.has(item.name) && !seenSections.has(item.name)) {
+        items.push(item)
+        seenSections.add(item.name)
+      }
+    } else if (blockIds.has(item.id)) {
+      items.push(item)
+    }
+  }
+  for (const s of masterSections) {
+    if (s.kind === 'section' && !seenSections.has(s.name)) items.push(s)
+  }
+  return items
+}
 
 export interface SetupConfig {
   activeSections: string[]
@@ -31,6 +89,11 @@ interface EditorStore {
 
   // Field values — per language
   fieldValues: MultiLanguageFieldValues
+
+  // Custom blocks (MailCraft Blocks) + interleaved layout order
+  customBlocks: CustomBlock[]
+  layoutOrder: LayoutOrder
+  activeBlockId: string | null
 
   // Preview
   renderedHtml: string
@@ -58,7 +121,16 @@ interface EditorStore {
     supportedLanguages: Language[]
     openSetupModal: boolean
     allSectionNames?: string[]
+    customBlocks?: CustomBlock[] | null
+    layoutOrder?: LayoutOrder | null
   }) => void
+  // Block actions
+  addBlock: (type: BlockType, atIndex?: number) => string
+  updateBlockContent: (id: string, lang: Language, patch: Partial<BlockContent>) => void
+  updateBlockProps: (id: string, patch: Partial<BlockProps>) => void
+  removeBlock: (id: string) => void
+  moveLayoutItem: (fromIndex: number, toIndex: number) => void
+  setActiveBlock: (id: string | null) => void
   setTemplateName: (name: string) => void
   setFieldValue: (key: string, value: FieldValue) => void
   setFieldValueAllLanguages: (key: string, value: FieldValue) => void
@@ -91,6 +163,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
   deletedSections: [],
   requiredFields: [],
   fieldValues: EMPTY_FIELD_VALUES,
+  customBlocks: [],
+  layoutOrder: [],
+  activeBlockId: null,
   renderedHtml: '',
   device: 'desktop',
   bodyAlignment: 'center',
@@ -112,6 +187,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
     const bodyAlignment: BodyAlignment =
       typeof savedAlignment === 'string' && savedAlignment === 'left' ? 'left' : 'center'
 
+    const customBlocks = data.customBlocks ?? []
+    const layoutOrder = buildInitialLayout(data.masterPreviewHtml, data.layoutOrder, customBlocks)
+
     set({
       masterTemplateId: data.masterTemplateId,
       savedTemplateId: data.savedTemplateId,
@@ -120,6 +198,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
       fieldValues: data.fieldValues,
       activeSections,
       deletedSections,
+      customBlocks,
+      layoutOrder,
+      activeBlockId: null,
       masterPreviewHtml: data.masterPreviewHtml,
       supportedLanguages: data.supportedLanguages,
       activeLanguage: data.supportedLanguages[0] ?? 'en',
@@ -131,6 +212,69 @@ export const useEditorStore = create<EditorStore>((set) => ({
       renderedHtml: '',
     })
   },
+
+  addBlock: (type, atIndex) => {
+    const block = makeBlock(type)
+    set((state) => {
+      const layoutOrder = [...state.layoutOrder]
+      const item: LayoutOrder[number] = { kind: 'block', id: block.id }
+      if (atIndex === undefined || atIndex < 0 || atIndex > layoutOrder.length) {
+        layoutOrder.push(item)
+      } else {
+        layoutOrder.splice(atIndex, 0, item)
+      }
+      return {
+        customBlocks: [...state.customBlocks, block],
+        layoutOrder,
+        activeBlockId: block.id,
+        isDirty: true,
+      }
+    })
+    return block.id
+  },
+
+  updateBlockContent: (id, lang, patch) =>
+    set((state) => ({
+      isDirty: true,
+      customBlocks: state.customBlocks.map((b) =>
+        b.id === id ? { ...b, content: { ...b.content, [lang]: { ...b.content[lang], ...patch } } } : b
+      ),
+    })),
+
+  updateBlockProps: (id, patch) =>
+    set((state) => ({
+      isDirty: true,
+      customBlocks: state.customBlocks.map((b) =>
+        b.id === id ? { ...b, props: { ...b.props, ...patch } } : b
+      ),
+    })),
+
+  removeBlock: (id) =>
+    set((state) => ({
+      isDirty: true,
+      customBlocks: state.customBlocks.filter((b) => b.id !== id),
+      layoutOrder: state.layoutOrder.filter((it) => !(it.kind === 'block' && it.id === id)),
+      activeBlockId: state.activeBlockId === id ? null : state.activeBlockId,
+    })),
+
+  moveLayoutItem: (fromIndex, toIndex) =>
+    set((state) => {
+      if (
+        fromIndex === toIndex ||
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= state.layoutOrder.length ||
+        toIndex >= state.layoutOrder.length
+      ) {
+        return {}
+      }
+      const layoutOrder = [...state.layoutOrder]
+      const [moved] = layoutOrder.splice(fromIndex, 1)
+      layoutOrder.splice(toIndex, 0, moved)
+      return { layoutOrder, isDirty: true }
+    }),
+
+  setActiveBlock: (id) => set({ activeBlockId: id }),
 
   setTemplateName: (name) => set({ templateName: name, isDirty: true }),
 
@@ -187,6 +331,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
     deletedSections: [],
     requiredFields: [],
     fieldValues: EMPTY_FIELD_VALUES,
+    customBlocks: [],
+    layoutOrder: [],
+    activeBlockId: null,
     renderedHtml: '',
     device: 'desktop',
     bodyAlignment: 'center',

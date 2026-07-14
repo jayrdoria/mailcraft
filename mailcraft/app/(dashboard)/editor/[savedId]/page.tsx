@@ -11,6 +11,7 @@ import type {
   SavedSectionConfig,
   Language,
 } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { LANGUAGES } from '@/lib/types/template'
 
 interface EditorPageProps {
@@ -63,6 +64,8 @@ export default async function EditorPage({ params }: EditorPageProps) {
   const lockedFields = saved.masterTemplate.lockedFields as unknown as LockedFieldConfig[]
   const fieldValues = saved.fieldValues as unknown as MultiLanguageFieldValues
   const sectionConfig = saved.sectionConfig as unknown as SavedSectionConfig[]
+  const customBlocks = (saved.customBlocks as unknown as CustomBlock[] | null) ?? null
+  const layoutOrder = (saved.layoutOrder as unknown as LayoutOrder | null) ?? null
   const masterRaw = saved.masterTemplate as unknown as { languages?: unknown; isImported?: boolean }
   const masterLanguages = (masterRaw.languages as Language[]) ?? []
   const isImported = masterRaw.isImported === true
@@ -99,6 +102,8 @@ export default async function EditorPage({ params }: EditorPageProps) {
       savedTemplateName={saved.name}
       fieldValues={fieldValues}
       sectionConfig={sectionConfig}
+      customBlocks={customBlocks}
+      layoutOrder={layoutOrder}
       masterPreviewHtml={masterPreviewHtml}
       isOwner={isOwner}
       supportedLanguages={supportedLanguages}
