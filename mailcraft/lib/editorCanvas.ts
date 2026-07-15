@@ -19,10 +19,21 @@ import { applySectionConfig, injectTokens } from '@/lib/clientRender'
 // Attribute name used to identify a block element inside the preview iframe.
 export const MCB_ID_ATTR = 'data-mcb-id'
 
+// Attribute name used to identify a master section's leading <tr> inside the
+// preview iframe, so the whole section can be pointer-dragged to reorder (Phase 5).
+export const MCB_SECTION_ATTR = 'data-mcb-section'
+
 // Tag the first <tr> of a rendered block with its id (block renderers always
 // emit a <tr> as the outermost element — see blockRenderer).
 function tagBlock(html: string, id: string): string {
   return html.replace('<tr', `<tr ${MCB_ID_ATTR}="${id}"`)
+}
+
+// Tag a section unit's first <tr> with its section name. Sections are groups of
+// sibling <tr> rows led by a SECTION:START comment; the leading row carries the
+// drag handle. If a unit has no <tr> (unusual) it simply isn't draggable.
+function tagSection(unit: string, name: string): string {
+  return unit.replace('<tr', `<tr ${MCB_SECTION_ATTR}="${name}"`)
 }
 
 // A collapsed drop-zone row. Invisible (0 height) until the iframe script adds
@@ -52,7 +63,7 @@ function composeEditorLayout(
     if (item.kind === 'section') {
       const unit = unitMap.get(item.name)
       if (unit !== undefined && !used.has(item.name)) {
-        parts.push(unit)
+        parts.push(tagSection(unit, item.name))
         used.add(item.name)
       }
     } else {

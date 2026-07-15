@@ -21,9 +21,12 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
 <script>
 (function(){
   var SEL='2px solid #6366f1', HOV='2px dashed rgba(99,102,241,0.55)';
-  var selectedId=null, pointerDragId=null, pointerZone=null;
+  // pointerDrag: null | {kind:'block',id} | {kind:'section',name}. One machinery
+  // drives reordering for both custom blocks and whole master sections (Phase 5).
+  var selectedId=null, pointerDrag=null, pointerZone=null;
   function tgt(el){ return el.querySelector('td') || el; }
   function blocks(){ return document.querySelectorAll('[data-mcb-id]'); }
+  function sections(){ return document.querySelectorAll('[data-mcb-section]'); }
   function zones(){ return document.querySelectorAll('[data-mcb-drop]'); }
   // Report body height to the parent so the iframe box grows when drop zones
   // expand during a drag (otherwise the bottom zones are clipped/unreachable).
@@ -54,13 +57,36 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
     cell.appendChild(h);
 
     el.addEventListener('mouseenter',function(){ h.style.opacity='1'; if(el.getAttribute('data-mcb-id')!==selectedId){ cell.style.outline=HOV; cell.style.outlineOffset='-2px'; }});
-    el.addEventListener('mouseleave',function(){ if(!pointerDragId){ h.style.opacity='0'; } if(el.getAttribute('data-mcb-id')!==selectedId){ cell.style.outline=''; cell.style.outlineOffset=''; }});
+    el.addEventListener('mouseleave',function(){ if(!pointerDrag){ h.style.opacity='0'; } if(el.getAttribute('data-mcb-id')!==selectedId){ cell.style.outline=''; cell.style.outlineOffset=''; }});
     el.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); window.parent.postMessage({type:'MCB_SELECT',id:el.getAttribute('data-mcb-id')},'*'); });
 
     h.addEventListener('click',function(e){ e.stopPropagation(); });
     h.addEventListener('mousedown',function(e){
       e.preventDefault(); e.stopPropagation();
-      pointerDragId=el.getAttribute('data-mcb-id'); pointerZone=null;
+      pointerDrag={kind:'block',id:el.getAttribute('data-mcb-id')}; pointerZone=null;
+      h.style.cursor='grabbing';
+      document.body.classList.add('mcb-dragging'); reportHeight();
+      window.parent.postMessage({type:'MCB_BLOCK_DRAG_START'},'*');
+    });
+  });
+
+  // Whole-section drag (Phase 5). A section spans several sibling <tr> rows; its
+  // leading row carries a labelled handle. Sections aren't click-to-edit, so they
+  // only get the drag affordance — reorder flows through the same drop zones.
+  sections().forEach(function(el){
+    var cell=tgt(el);
+    cell.style.position='relative';
+    var h=document.createElement('div');
+    h.title='Drag to move section';
+    h.innerHTML='\\u2630 Section';
+    h.style.cssText='position:absolute;top:4px;right:4px;z-index:6;height:20px;padding:0 7px;display:flex;align-items:center;gap:4px;font-family:Arial,sans-serif;font-size:10px;font-weight:600;letter-spacing:.02em;color:#fff;background:#0f172a;border-radius:4px;cursor:grab;opacity:0;transition:opacity .1s;box-shadow:0 1px 3px rgba(0,0,0,.35);user-select:none;-webkit-user-select:none;';
+    cell.appendChild(h);
+    el.addEventListener('mouseenter',function(){ h.style.opacity='1'; });
+    el.addEventListener('mouseleave',function(){ if(!pointerDrag){ h.style.opacity='0'; } });
+    h.addEventListener('click',function(e){ e.stopPropagation(); });
+    h.addEventListener('mousedown',function(e){
+      e.preventDefault(); e.stopPropagation();
+      pointerDrag={kind:'section',name:el.getAttribute('data-mcb-section')}; pointerZone=null;
       h.style.cursor='grabbing';
       document.body.classList.add('mcb-dragging'); reportHeight();
       window.parent.postMessage({type:'MCB_BLOCK_DRAG_START'},'*');
@@ -82,7 +108,7 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
     return best;
   }
   document.addEventListener('mousemove',function(e){
-    if(!pointerDragId) return;
+    if(!pointerDrag) return;
     e.preventDefault(); clearOver();
     pointerZone=nearestZone(e.clientY);
     if(pointerZone) pointerZone.classList.add('mcb-over');
@@ -90,9 +116,14 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
     window.parent.postMessage({type:'MCB_POINTER',clientY:e.clientY},'*');
   });
   document.addEventListener('mouseup',function(){
-    if(!pointerDragId) return;
-    var id=pointerDragId; pointerDragId=null;
-    if(pointerZone){ var idx=parseInt(pointerZone.getAttribute('data-mcb-drop'),10); window.parent.postMessage({type:'MCB_MOVE',id:id,toIndex:idx},'*'); }
+    if(!pointerDrag) return;
+    var drag=pointerDrag; pointerDrag=null;
+    if(pointerZone){
+      var idx=parseInt(pointerZone.getAttribute('data-mcb-drop'),10);
+      var msg={type:'MCB_MOVE',toIndex:idx};
+      if(drag.kind==='section'){ msg.section=drag.name; } else { msg.id=drag.id; }
+      window.parent.postMessage(msg,'*');
+    }
     pointerZone=null; endDrag(); reportHeight();
     window.parent.postMessage({type:'MCB_BLOCK_DRAG_END'},'*');
   });
@@ -103,7 +134,7 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
     if(e.data.type==='MCB_SET_SELECTED'){ selectedId=e.data.id; paint(); }
     else if(e.data.type==='MCB_DRAG_START'){ document.body.classList.add('mcb-dragging'); reportHeight(); }
     else if(e.data.type==='MCB_DRAG_END'){ endDrag(); reportHeight(); }
-    else if(e.data.type==='MCB_CANCEL'){ if(pointerDragId){ pointerDragId=null; pointerZone=null; endDrag(); reportHeight(); window.parent.postMessage({type:'MCB_BLOCK_DRAG_END'},'*'); } }
+    else if(e.data.type==='MCB_CANCEL'){ if(pointerDrag){ pointerDrag=null; pointerZone=null; endDrag(); reportHeight(); window.parent.postMessage({type:'MCB_BLOCK_DRAG_END'},'*'); } }
   });
 })();
 <\/script>`
@@ -165,10 +196,14 @@ export default function LivePreview() {
         // so the bottom-most zones aren't clipped out of reach.
         if (iframeRef.current) iframeRef.current.style.height = data.height + 'px'
       } else if (data?.type === 'MCB_MOVE') {
-        // Reorder an existing block. data.toIndex is a drop-zone index in the
-        // ORIGINAL layoutOrder; adjust for the item being removed from earlier.
+        // Reorder an existing layout item (custom block by id, or master section
+        // by name). data.toIndex is a drop-zone index in the ORIGINAL layoutOrder;
+        // adjust for the item being removed from earlier.
         const state = useEditorStore.getState()
-        const fromIndex = state.layoutOrder.findIndex((it) => it.kind === 'block' && it.id === data.id)
+        const fromIndex =
+          typeof data.section === 'string'
+            ? state.layoutOrder.findIndex((it) => it.kind === 'section' && it.name === data.section)
+            : state.layoutOrder.findIndex((it) => it.kind === 'block' && it.id === data.id)
         if (fromIndex !== -1) {
           const to = data.toIndex > fromIndex ? data.toIndex - 1 : data.toIndex
           state.moveLayoutItem(fromIndex, to)

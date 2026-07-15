@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import {
   Type, Image as ImageIcon, MousePointerClick, Minus, MoveVertical,
-  GripVertical, Trash2, Pencil, ChevronUp, ChevronDown, Lock, Plus,
+  GripVertical, Trash2, Pencil, ChevronUp, ChevronDown, Layers, Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
@@ -115,14 +115,35 @@ export default function BlocksPanel({ sectionConfig }: BlocksPanelProps) {
             return (
               <div
                 key={`sec-${item.name}`}
+                draggable
+                onDragStart={() => (dragIndex.current = i)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => handleDrop(i)}
-                className="flex items-center gap-2 px-2.5 py-2 rounded-md bg-muted/40 border border-dashed"
+                className="group flex items-center gap-1.5 px-2 py-2 rounded-md bg-muted/40 border border-dashed transition-colors hover:bg-accent"
               >
-                <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
+                <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0 cursor-grab active:cursor-grabbing" />
+                <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{sectionLabels.get(item.name) ?? item.name}</p>
                   <p className="text-[10px] text-muted-foreground">Template section</p>
+                </div>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => moveLayoutItem(i, i - 1)}
+                    disabled={i === 0}
+                    title="Move up"
+                    className="p-0.5 rounded hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => moveLayoutItem(i, i + 1)}
+                    disabled={i === layoutOrder.length - 1}
+                    title="Move down"
+                    className="p-0.5 rounded hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             )
