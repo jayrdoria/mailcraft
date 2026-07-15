@@ -94,6 +94,9 @@ interface EditorStore {
   customBlocks: CustomBlock[]
   layoutOrder: LayoutOrder
   activeBlockId: string | null
+  sidebarTab: 'content' | 'blocks'
+  // Transient: block type currently being dragged from the palette (Phase 4b)
+  draggingBlockType: BlockType | null
 
   // Preview
   renderedHtml: string
@@ -131,6 +134,8 @@ interface EditorStore {
   removeBlock: (id: string) => void
   moveLayoutItem: (fromIndex: number, toIndex: number) => void
   setActiveBlock: (id: string | null) => void
+  setSidebarTab: (tab: 'content' | 'blocks') => void
+  setDraggingBlockType: (type: BlockType | null) => void
   setTemplateName: (name: string) => void
   setFieldValue: (key: string, value: FieldValue) => void
   setFieldValueAllLanguages: (key: string, value: FieldValue) => void
@@ -166,6 +171,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
   customBlocks: [],
   layoutOrder: [],
   activeBlockId: null,
+  sidebarTab: 'content',
+  draggingBlockType: null,
   renderedHtml: '',
   device: 'desktop',
   bodyAlignment: 'center',
@@ -276,6 +283,10 @@ export const useEditorStore = create<EditorStore>((set) => ({
 
   setActiveBlock: (id) => set({ activeBlockId: id }),
 
+  setSidebarTab: (tab) => set({ sidebarTab: tab }),
+
+  setDraggingBlockType: (type) => set({ draggingBlockType: type }),
+
   setTemplateName: (name) => set({ templateName: name, isDirty: true }),
 
   setFieldValue: (key, value) =>
@@ -334,6 +345,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
     customBlocks: [],
     layoutOrder: [],
     activeBlockId: null,
+    sidebarTab: 'content',
+    draggingBlockType: null,
     renderedHtml: '',
     device: 'desktop',
     bodyAlignment: 'center',

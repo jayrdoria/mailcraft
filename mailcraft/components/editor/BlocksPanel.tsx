@@ -55,6 +55,7 @@ export default function BlocksPanel({ sectionConfig }: BlocksPanelProps) {
   const removeBlock = useEditorStore((s) => s.removeBlock)
   const moveLayoutItem = useEditorStore((s) => s.moveLayoutItem)
   const setActiveBlock = useEditorStore((s) => s.setActiveBlock)
+  const setDraggingBlockType = useEditorStore((s) => s.setDraggingBlockType)
 
   const dragIndex = useRef<number | null>(null)
 
@@ -86,10 +87,18 @@ export default function BlocksPanel({ sectionConfig }: BlocksPanelProps) {
           {PALETTE.map(({ type, label, icon: Icon }) => (
             <button
               key={type}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', type)
+                e.dataTransfer.effectAllowed = 'copy'
+                setDraggingBlockType(type)
+              }}
+              onDragEnd={() => setDraggingBlockType(null)}
               onClick={() => addBlock(type)}
+              title={`Click to add, or drag onto the preview`}
               className="flex flex-col items-center gap-1 py-2 rounded-md border text-[11px]
                          text-muted-foreground hover:text-foreground hover:bg-accent hover:border-primary/40
-                         transition-colors cursor-pointer"
+                         transition-colors cursor-grab active:cursor-grabbing"
             >
               <Icon className="w-3.5 h-3.5" />
               {label}

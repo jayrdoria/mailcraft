@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Lock, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editorStore'
-import { clientRender } from '@/lib/clientRender'
+import { renderEditorCanvas } from '@/lib/editorCanvas'
 import ParagraphEditor from '@/components/editor/ParagraphEditor'
 import RichTextEditor from '@/components/editor/RichTextEditor'
 import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue, BodyParagraph } from '@/lib/types/template'
@@ -124,7 +124,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
       layout: LayoutOrder,
       lang: Language,
     ) => {
-      const rendered = clientRender(html, values, sc, br, align, { customBlocks: blocks, layoutOrder: layout, lang })
+      const rendered = renderEditorCanvas(html, values, sc, br, align, blocks, layout, lang)
       setRenderedHtml(rendered)
     },
     300

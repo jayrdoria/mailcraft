@@ -103,7 +103,8 @@ export default function EditorClient({
   const markClean = useEditorStore((s) => s.markClean)
   const currentSavedId = useEditorStore((s) => s.savedTemplateId)
   const [nameError, setNameError] = useState<string | null>(null)
-  const [sidebarTab, setSidebarTab] = useState<'content' | 'blocks'>('content')
+  const sidebarTab = useEditorStore((s) => s.sidebarTab)
+  const setSidebarTab = useEditorStore((s) => s.setSidebarTab)
 
   const SIDEBAR_MIN = 280
   const SIDEBAR_MAX = 600

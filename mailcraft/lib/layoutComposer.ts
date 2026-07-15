@@ -59,21 +59,28 @@ export function deriveDefaultLayout(html: string): LayoutOrder {
 //   - layout referencing an unknown block → skipped
 // ─────────────────────────────────────────────
 
-export function composeLayout(
-  html: string,
-  layoutOrder: LayoutOrder | null | undefined,
-  renderedBlocks: Record<string, string> = {}
-): string {
-  if (!layoutOrder || layoutOrder.length === 0) return html
+// ─────────────────────────────────────────────
+// Section units — from each section's START up to (but not including) the next
+// section's START, so inter-section content (dividers, spacers that live BETWEEN
+// markers) travels with the preceding section and is never dropped. The last
+// section's unit ends at its own END; whatever follows is postamble. In source
+// order these reconstruct the original byte-for-byte.
+//
+// Shared by composeLayout (server + client export) and the editor canvas
+// (editorCanvas.ts) so the placement logic never drifts between the two.
+// ─────────────────────────────────────────────
 
+export interface SectionUnits {
+  preamble: string
+  postamble: string
+  unitMap: Map<string, string>
+  order: string[] // section names in source order
+}
+
+export function buildSectionUnits(html: string): SectionUnits | null {
   const matches = findSections(html)
-  if (matches.length === 0) return html
+  if (matches.length === 0) return null
 
-  // Build a "unit" per section: from its START marker up to (but not including)
-  // the next section's START — so any inter-section content (dividers, spacers
-  // that live BETWEEN section markers) travels with the preceding section and is
-  // never dropped. The last section's unit ends at its own END; whatever follows
-  // is postamble. In source order this reconstructs the original byte-for-byte.
   const preamble = html.slice(0, matches[0].start)
   const postamble = html.slice(matches[matches.length - 1].end)
 
@@ -84,6 +91,20 @@ export function composeLayout(
     unitMap.set(matches[i].name, html.slice(start, unitEnd))
   }
 
+  return { preamble, postamble, unitMap, order: matches.map((m) => m.name) }
+}
+
+export function composeLayout(
+  html: string,
+  layoutOrder: LayoutOrder | null | undefined,
+  renderedBlocks: Record<string, string> = {}
+): string {
+  if (!layoutOrder || layoutOrder.length === 0) return html
+
+  const units = buildSectionUnits(html)
+  if (!units) return html
+
+  const { preamble, postamble, unitMap, order } = units
   const used = new Set<string>()
   const parts: string[] = []
 
@@ -101,8 +122,8 @@ export function composeLayout(
   }
 
   // Safety net: never drop a master section that wasn't referenced in layoutOrder.
-  for (const s of matches) {
-    if (!used.has(s.name)) parts.push(unitMap.get(s.name)!)
+  for (const name of order) {
+    if (!used.has(name)) parts.push(unitMap.get(name)!)
   }
 
   return preamble + parts.join('') + postamble
