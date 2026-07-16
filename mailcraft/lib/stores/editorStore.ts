@@ -94,6 +94,8 @@ interface EditorStore {
   customBlocks: CustomBlock[]
   layoutOrder: LayoutOrder
   activeBlockId: string | null
+  // Field key currently being edited — drives the preview highlight (editor-only).
+  activeFieldKey: string | null
   sidebarTab: 'content' | 'blocks'
   // Transient: block type currently being dragged from the palette (Phase 4b)
   draggingBlockType: BlockType | null
@@ -134,6 +136,7 @@ interface EditorStore {
   removeBlock: (id: string) => void
   moveLayoutItem: (fromIndex: number, toIndex: number) => void
   setActiveBlock: (id: string | null) => void
+  setActiveFieldKey: (key: string | null) => void
   setSidebarTab: (tab: 'content' | 'blocks') => void
   setDraggingBlockType: (type: BlockType | null) => void
   setTemplateName: (name: string) => void
@@ -171,6 +174,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   customBlocks: [],
   layoutOrder: [],
   activeBlockId: null,
+  activeFieldKey: null,
   sidebarTab: 'content',
   draggingBlockType: null,
   renderedHtml: '',
@@ -283,6 +287,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
 
   setActiveBlock: (id) => set({ activeBlockId: id }),
 
+  setActiveFieldKey: (key) => set({ activeFieldKey: key }),
+
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
 
   setDraggingBlockType: (type) => set({ draggingBlockType: type }),
@@ -345,6 +351,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
     customBlocks: [],
     layoutOrder: [],
     activeBlockId: null,
+    activeFieldKey: null,
     sidebarTab: 'content',
     draggingBlockType: null,
     renderedHtml: '',

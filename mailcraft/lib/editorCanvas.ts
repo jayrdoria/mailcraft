@@ -81,6 +81,38 @@ function composeEditorLayout(
   return preamble + parts.join('') + postamble
 }
 
+// ─────────────────────────────────────────────
+// FIELD TAGGING (editor-only) — mark each editable field's rendered element with
+// data-mc-field="KEY" so the preview can highlight the field being edited. Runs
+// BEFORE token injection (while {{KEY}} markers are still present). Two contexts:
+//   - token inside a tag's attribute (img src / a href) → tag that element
+//   - token in text position → wrap the value in a span (or div for block
+//     paragraph values) that carries the attribute
+// Pure string work; never runs on the export path, so tags never leak.
+// ─────────────────────────────────────────────
+
+const FIELD_TOKEN_RE = /\{\{([A-Z0-9_]+)\}\}/g
+
+export function tagFieldElements(html: string, fieldValues: Record<string, FieldValue>): string {
+  // Pass A — opening tags whose attributes contain a token: add data-mc-field.
+  let out = html.replace(/<([a-zA-Z][\w-]*)([^<>]*?)>/g, (tag, name, attrs) => {
+    const m = /\{\{([A-Z0-9_]+)\}\}/.exec(attrs)
+    if (!m) return tag
+    return `<${name} data-mc-field="${m[1]}"${attrs}>`
+  })
+
+  // Pass B — remaining tokens in text position: wrap. Skip tokens still inside a
+  // tag (attribute tokens handled above) to avoid corrupting markup.
+  out = out.replace(FIELD_TOKEN_RE, (match, key, offset: number, str: string) => {
+    const insideTag = str.lastIndexOf('<', offset) > str.lastIndexOf('>', offset)
+    if (insideTag) return match
+    const el = Array.isArray(fieldValues[key]) ? 'div' : 'span'
+    return `<${el} data-mc-field="${key}">${match}</${el}>`
+  })
+
+  return out
+}
+
 // Full instrumented preview render (mirrors clientRender + block tagging).
 export function renderEditorCanvas(
   masterPreviewHtml: string,
@@ -95,6 +127,7 @@ export function renderEditorCanvas(
   const rendered = renderBlocksById(customBlocks, lang, { brand, sanitize: false })
   let html = composeEditorLayout(masterPreviewHtml, layoutOrder, rendered)
   html = applySectionConfig(html, sectionConfig)
+  html = tagFieldElements(html, fieldValues) // editor-only: mark fields for highlight
   html = injectTokens(html, fieldValues, brand, alignment)
   return html
 }

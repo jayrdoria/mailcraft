@@ -22,15 +22,16 @@ export const POST = apiHandler(async (req) => {
   const parsed = createImportSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
-  const { name, brand, activeLanguages, html, fieldMappings } = parsed.data
+  const { name, brand, activeLanguages, html, fieldMappings, sections } = parsed.data
 
-  // Replace mapped elements with {{KEY}} tokens.
+  // Replace mapped elements with {{KEY}} tokens, wrap the mapped sections in
+  // SECTION markers, and derive each field's section group.
   // initialValues holds the original content extracted from each mapped element.
-  const { placeholderHtml, initialValues } = injectPlaceholders(html, fieldMappings)
+  const { placeholderHtml, initialValues, fieldGroups } = injectPlaceholders(html, fieldMappings, sections)
 
   // Build editable field definitions, then populate defaultValue from the extracted
   // original content so the editor pre-fills with real content instead of blank fields.
-  const editableFields: TemplateFieldConfig[] = buildEditableFields(fieldMappings).map((field) => ({
+  const editableFields: TemplateFieldConfig[] = buildEditableFields(fieldMappings, fieldGroups).map((field) => ({
     ...field,
     defaultValue: initialValues[field.key] ?? '',
   }))

@@ -184,6 +184,12 @@ export const createImportSchema = z.object({
     label: z.string().min(1).max(100),
     type:  z.enum(['text', 'url', 'link', 'richtext']),
   })).min(1),
+  // Phase 8 — the mapper's edited sections; wrapped in SECTION markers on save.
+  sections:        z.array(z.object({
+    sectionId: z.string().min(1),
+    label:     z.string().max(100),
+    rowIds:    z.array(z.string().min(1)),
+  })).optional().default([]),
 })
 
 // ─────────────────────────────────────────────

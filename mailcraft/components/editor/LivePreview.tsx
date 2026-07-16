@@ -40,6 +40,25 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
   function clearOver(){ zones().forEach(function(z){ z.classList.remove('mcb-over'); }); }
   function endDrag(){ document.body.classList.remove('mcb-dragging'); clearOver(); }
 
+  // Field highlight (editor Content-tab focus → outline the matching element).
+  var fieldEls=[];
+  function clearField(){ for(var i=0;i<fieldEls.length;i++){ var el=fieldEls[i]; el.style.outline=el.__mcbFO||''; el.style.outlineOffset=el.__mcbFOO||''; el.style.borderRadius=el.__mcbFBR||''; el.style.display=el.__mcbFD||''; } fieldEls=[]; }
+  function highlightField(key,doScroll){
+    clearField();
+    if(!key) return;
+    var els=document.querySelectorAll('[data-mc-field~="'+key+'"]');
+    for(var i=0;i<els.length;i++){ var el=els[i];
+      el.__mcbFO=el.style.outline; el.__mcbFOO=el.style.outlineOffset; el.__mcbFBR=el.style.borderRadius; el.__mcbFD=el.style.display;
+      // Inline elements (e.g. <a>) collapse the outline to their text line-height,
+      // so only the left/right edges show — promote to inline-block so it wraps.
+      var disp=window.getComputedStyle?window.getComputedStyle(el).display:'';
+      if(disp==='inline'){ el.style.display='inline-block'; }
+      el.style.outline='2px solid #f59e0b'; el.style.outlineOffset='2px'; el.style.borderRadius='2px';
+      fieldEls.push(el);
+    }
+    if(doScroll && els[0]){ var r=els[0].getBoundingClientRect(); window.parent.postMessage({type:'MCB_FIELD_SCROLL',top:r.top,height:r.height},'*'); }
+  }
+
   blocks().forEach(function(el){
     el.style.cursor='pointer';
     var cell=tgt(el);
@@ -132,6 +151,7 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
   window.addEventListener('message',function(e){
     if(!e.data) return;
     if(e.data.type==='MCB_SET_SELECTED'){ selectedId=e.data.id; paint(); }
+    else if(e.data.type==='MCB_FIELD_FOCUS'){ highlightField(e.data.key, e.data.scroll); }
     else if(e.data.type==='MCB_DRAG_START'){ document.body.classList.add('mcb-dragging'); reportHeight(); }
     else if(e.data.type==='MCB_DRAG_END'){ endDrag(); reportHeight(); }
     else if(e.data.type==='MCB_CANCEL'){ if(pointerDrag){ pointerDrag=null; pointerZone=null; endDrag(); reportHeight(); window.parent.postMessage({type:'MCB_BLOCK_DRAG_END'},'*'); } }
@@ -162,6 +182,7 @@ export default function LivePreview() {
   const setDevice = useEditorStore((s) => s.setDevice)
   const renderedHtml = useEditorStore((s) => s.renderedHtml)
   const activeBlockId = useEditorStore((s) => s.activeBlockId)
+  const activeFieldKey = useEditorStore((s) => s.activeFieldKey)
   const setActiveBlock = useEditorStore((s) => s.setActiveBlock)
   const setSidebarTab = useEditorStore((s) => s.setSidebarTab)
   const draggingBlockType = useEditorStore((s) => s.draggingBlockType)
@@ -184,6 +205,7 @@ export default function LivePreview() {
       const data = e.data
       if (data?.type === 'MCB_SELECT') {
         setActiveBlock(data.id)
+        useEditorStore.getState().setActiveFieldKey(null) // drop field highlight when a block is picked
         setSidebarTab('blocks')
       } else if (data?.type === 'MCB_DROP') {
         // Read the dragging type fresh (avoids stale closure) and insert at the zone index.
@@ -225,6 +247,18 @@ export default function LivePreview() {
           const EDGE = 64
           scrollDir.current = cursorY < EDGE ? -1 : cursorY > cRect.height - EDGE ? 1 : 0
         }
+      } else if (data?.type === 'MCB_FIELD_SCROLL') {
+        // The focused field's element position (iframe-local). Scroll the preview
+        // container so it sits centred and the user sees what they're editing.
+        const sc = scrollRef.current
+        const ifr = iframeRef.current
+        if (sc && ifr) {
+          const scRect = sc.getBoundingClientRect()
+          const ifrRect = ifr.getBoundingClientRect()
+          const elTopInViewport = ifrRect.top - scRect.top + data.top
+          const target = sc.scrollTop + elTopInViewport - sc.clientHeight / 2 + data.height / 2
+          sc.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
+        }
       }
     }
     window.addEventListener('message', onMessage)
@@ -254,6 +288,18 @@ export default function LivePreview() {
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage({ type: 'MCB_SET_SELECTED', id: activeBlockId }, '*')
   }, [activeBlockId, renderedHtml])
+
+  // Highlight + scroll to the field currently being edited. Scroll only when the
+  // focused field changes (not on every keystroke) so the preview doesn't jump.
+  useEffect(() => {
+    iframeRef.current?.contentWindow?.postMessage({ type: 'MCB_FIELD_FOCUS', key: activeFieldKey, scroll: true }, '*')
+  }, [activeFieldKey])
+
+  // Re-apply the highlight (no scroll) after each re-render, since srcDoc reloads.
+  useEffect(() => {
+    iframeRef.current?.contentWindow?.postMessage({ type: 'MCB_FIELD_FOCUS', key: activeFieldKey, scroll: false }, '*')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renderedHtml])
 
   // Auto-scroll the preview while dragging: neither native DnD nor a pointer drag
   // scrolls on its own, so off-screen drop zones are unreachable. scrollDir is set
@@ -344,8 +390,9 @@ export default function LivePreview() {
                   const body = iframe.contentDocument?.body
                   if (body) iframe.style.height = body.scrollHeight + 'px'
                 } catch { /* cross-origin guard */ }
-                // Re-sync selection after each reload (srcDoc changes on every edit).
+                // Re-sync selection + field highlight after each reload (srcDoc changes on every edit).
                 iframe.contentWindow?.postMessage({ type: 'MCB_SET_SELECTED', id: activeBlockId }, '*')
+                iframe.contentWindow?.postMessage({ type: 'MCB_FIELD_FOCUS', key: activeFieldKey }, '*')
               }}
             />
           ) : (

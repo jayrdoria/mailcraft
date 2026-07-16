@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import UploadStep from './UploadStep'
 import VisualMapper from './VisualMapper'
 import ConfigStep from './ConfigStep'
-import type { AnalyzeResult, FieldMapping } from '@/lib/types/import'
+import type { AnalyzeResult, FieldMapping, MappedSection } from '@/lib/types/import'
 
 type Step = 1 | 2 | 3
 
@@ -24,9 +24,16 @@ export default function ImportWizard({ onClose }: ImportWizardProps) {
   const [step, setStep] = useState<Step>(1)
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null)
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([])
+  // Phase 7 — editable section model, seeded one-per-detected-section. Rename /
+  // merge / split mutate this; Phase 8 sends it to create for marker injection.
+  const [sections, setSections] = useState<MappedSection[]>([])
 
   function handleUploadSuccess(result: AnalyzeResult) {
     setAnalyzeResult(result)
+    // Pre-fill every auto-detected field so the mapper opens ready to review,
+    // not blank. The user prunes/renames rather than clicking each element.
+    setFieldMappings(result.suggestedMappings)
+    setSections(result.sections.map((s) => ({ sectionId: s.sectionId, label: s.label, rowIds: [s.sectionId] })))
     setStep(2)
   }
 
@@ -34,6 +41,7 @@ export default function ImportWizard({ onClose }: ImportWizardProps) {
     setStep(1)
     setAnalyzeResult(null)
     setFieldMappings([])
+    setSections([])
   }
 
   return (
@@ -79,6 +87,8 @@ export default function ImportWizard({ onClose }: ImportWizardProps) {
             analyzeResult={analyzeResult}
             fieldMappings={fieldMappings}
             onFieldMappingsChange={setFieldMappings}
+            sections={sections}
+            onSectionsChange={setSections}
             onBack={handleBack1}
             onNext={() => setStep(3)}
           />
@@ -88,6 +98,7 @@ export default function ImportWizard({ onClose }: ImportWizardProps) {
           <ConfigStep
             html={analyzeResult.instrumentedHtml}
             fieldMappings={fieldMappings}
+            sections={sections}
             onBack={() => setStep(2)}
             onClose={onClose}
           />

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { apiFetch } from '@/lib/apiFetch'
-import type { FieldMapping } from '@/lib/types/import'
+import type { FieldMapping, MappedSection } from '@/lib/types/import'
 import type { Language } from '@/lib/types/template'
 import { LANGUAGES, LANGUAGE_LABELS } from '@/lib/types/template'
 
@@ -19,11 +19,12 @@ const BRAND_OPTIONS: { value: Brand; label: string }[] = [
 interface ConfigStepProps {
   html: string
   fieldMappings: FieldMapping[]
+  sections: MappedSection[]
   onBack: () => void
   onClose: () => void
 }
 
-export default function ConfigStep({ html, fieldMappings, onBack, onClose }: ConfigStepProps) {
+export default function ConfigStep({ html, fieldMappings, sections, onBack, onClose }: ConfigStepProps) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [brand, setBrand] = useState<Brand>('STAKES')
@@ -58,6 +59,7 @@ export default function ConfigStep({ html, fieldMappings, onBack, onClose }: Con
           activeLanguages,
           html,
           fieldMappings,
+          sections,
         }),
       })
       const json = await res.json()

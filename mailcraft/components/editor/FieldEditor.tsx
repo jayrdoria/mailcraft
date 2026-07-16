@@ -79,6 +79,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const setFieldValueAllLanguages = useEditorStore((s) => s.setFieldValueAllLanguages)
   const customBlocks = useEditorStore((s) => s.customBlocks)
   const layoutOrder = useEditorStore((s) => s.layoutOrder)
+  const setActiveFieldKey = useEditorStore((s) => s.setActiveFieldKey)
 
   // Session-only: tracks which url fields are synced across all languages
   const [syncedFields, setSyncedFields] = useState<Set<string>>(new Set())
@@ -214,7 +215,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                         ? rawParagraphs
                         : (field.defaultParagraphsByLang?.[activeLanguage as Language] ?? field.defaultParagraphs ?? [{ id: 'p1', html: '' }])
                     return (
-                      <div key={field.key}>
+                      <div key={field.key} onFocusCapture={() => setActiveFieldKey(field.key)}>
                         <label className="flex items-center gap-1 text-xs font-medium mb-1">
                           {field.label}
                           {isRequired && <span className="text-destructive">*</span>}
@@ -236,7 +237,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                   const isSynced = syncedFields.has(field.key)
 
                   return (
-                    <div key={field.key}>
+                    <div key={field.key} onFocusCapture={() => setActiveFieldKey(field.key)}>
                       <div className="flex items-center justify-between mb-1">
                         <label className="flex items-center gap-1 text-xs font-medium">
                           {field.label}
