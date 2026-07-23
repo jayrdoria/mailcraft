@@ -34,6 +34,7 @@ const SECTION_DESCRIPTIONS: Record<string, string> = {
 import SetupModal from './SetupModal'
 import FieldEditor from './FieldEditor'
 import BlocksPanel from './BlocksPanel'
+import BlockInspector from './BlockInspector'
 import LivePreview from './LivePreview'
 import ExportButtons from './ExportButtons'
 import TemplateActivityLog from './TemplateActivityLog'
@@ -105,6 +106,8 @@ export default function EditorClient({
   const [nameError, setNameError] = useState<string | null>(null)
   const sidebarTab = useEditorStore((s) => s.sidebarTab)
   const setSidebarTab = useEditorStore((s) => s.setSidebarTab)
+  const activeBlockId = useEditorStore((s) => s.activeBlockId)
+  const showInspector = sidebarTab === 'blocks' && !!activeBlockId
 
   const SIDEBAR_MIN = 280
   const SIDEBAR_MAX = 600
@@ -544,6 +547,14 @@ export default function EditorClient({
               ))}
             </div>
           </div>
+
+          {/* Block inspector — the block editor in its own roomy full-height column
+              (only while editing a block on the Blocks tab). */}
+          {showInspector && (
+            <div className="shrink-0 w-[340px] border-r flex flex-col overflow-hidden bg-card">
+              <BlockInspector />
+            </div>
+          )}
 
           {/* Preview + export */}
           <div className="flex-1 flex flex-col overflow-hidden">

@@ -68,6 +68,10 @@ export interface BlockProps {
 
   // spacer
   height?: number             // px
+
+  // columns
+  columnCount?: number        // 2 or 3
+  columnGap?: number          // px gap between columns
 }
 
 // ─────────────────────────────────────────────
@@ -79,6 +83,10 @@ export interface CustomBlock {
   type: BlockType
   props: BlockProps
   content: Partial<Record<Language, BlockContent>>  // per-language; non-text blocks may only fill 'en'
+  // COLUMNS ONLY (Phase 9): child block ids per column. The child blocks live in
+  // the flat customBlocks array (so they reuse the whole block editor + actions)
+  // but are NOT in layoutOrder — they only render inside this columns block.
+  columns?: string[][]
 }
 
 // ─────────────────────────────────────────────

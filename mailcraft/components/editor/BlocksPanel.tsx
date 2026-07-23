@@ -3,29 +3,44 @@
 import { useRef } from 'react'
 import {
   Type, Image as ImageIcon, MousePointerClick, Minus, MoveVertical,
-  GripVertical, Trash2, Pencil, ChevronUp, ChevronDown, Layers, Plus,
+  GripVertical, Trash2, Pencil, ChevronUp, ChevronDown, Layers, Plus, Columns3, LayoutTemplate, Rows3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useEditorStore } from '@/lib/stores/editorStore'
+import { useEditorStore, BLOCK_PRESETS, type PresetId } from '@/lib/stores/editorStore'
 import { LanguageSelector } from './FieldEditor'
-import RichTextEditor from './RichTextEditor'
 import type { SavedSectionConfig } from '@/lib/types/template'
 import type { BlockType, CustomBlock } from '@/lib/types/blocks'
 
-// Palette (columns deferred to Phase 9)
+// Palette
 const PALETTE: { type: BlockType; label: string; icon: React.ElementType }[] = [
   { type: 'text',    label: 'Text',    icon: Type },
   { type: 'image',   label: 'Image',   icon: ImageIcon },
   { type: 'button',  label: 'Button',  icon: MousePointerClick },
   { type: 'divider', label: 'Divider', icon: Minus },
   { type: 'spacer',  label: 'Spacer',  icon: MoveVertical },
+  { type: 'columns', label: 'Columns', icon: Columns3 },
 ]
 
-const BLOCK_ICON: Record<BlockType, React.ElementType> = {
-  text: Type, image: ImageIcon, button: MousePointerClick, divider: Minus, spacer: MoveVertical, columns: MoveVertical,
+// Block types allowed inside a column — everything except columns (no nesting).
+// Shared with BlockInspector's columns editor.
+export const COLUMN_CHILD_TYPES = PALETTE.filter((x) => x.type !== 'columns')
+
+export const BLOCK_ICON: Record<BlockType, React.ElementType> = {
+  text: Type, image: ImageIcon, button: MousePointerClick, divider: Minus, spacer: MoveVertical, columns: Columns3,
 }
 
-function blockSummary(block: CustomBlock, lang: string): string {
+// Icon per quick-layout: side-by-side layouts get the columns icon, stacked
+// groups get the rows icon, single-content ones their content icon.
+const PRESET_ICON: Record<PresetId, React.ElementType> = {
+  thumbnails: Columns3,
+  twoColCards: Columns3,
+  imageTextButton: Rows3,
+  doubleImageTextButton: Rows3,
+  textButton: MousePointerClick,
+  bannerButton: ImageIcon,
+}
+
+export function blockSummary(block: CustomBlock, lang: string): string {
   const c = block.content[lang as keyof typeof block.content] ?? block.content.en ?? {}
   switch (block.type) {
     case 'text': {
@@ -36,6 +51,11 @@ function blockSummary(block: CustomBlock, lang: string): string {
     case 'button': return c.label || 'Button'
     case 'divider': return 'Divider'
     case 'spacer': return `Spacer · ${block.props.height ?? 24}px`
+    case 'columns': {
+      const n = block.props.columnCount ?? 2
+      const childCount = (block.columns ?? []).reduce((sum, col) => sum + col.length, 0)
+      return n === 1 ? `Group · ${childCount} block${childCount === 1 ? '' : 's'}` : `${n} columns`
+    }
     default:       return block.type
   }
 }
@@ -56,13 +76,13 @@ export default function BlocksPanel({ sectionConfig }: BlocksPanelProps) {
   const moveLayoutItem = useEditorStore((s) => s.moveLayoutItem)
   const setActiveBlock = useEditorStore((s) => s.setActiveBlock)
   const setDraggingBlockType = useEditorStore((s) => s.setDraggingBlockType)
+  const insertPreset = useEditorStore((s) => s.insertPreset)
 
   const dragIndex = useRef<number | null>(null)
 
   const sectionLabels = new Map(sectionConfig.map((s) => [s.name, s.label]))
   const deletedSections = new Set(sectionConfig.filter((s) => s.isDeleted).map((s) => s.name))
   const blocksById = new Map(customBlocks.map((b) => [b.id, b]))
-  const activeBlock = activeBlockId ? blocksById.get(activeBlockId) ?? null : null
 
   function handleDrop(targetIndex: number) {
     if (dragIndex.current === null) return
@@ -104,6 +124,29 @@ export default function BlocksPanel({ sectionConfig }: BlocksPanelProps) {
               {label}
             </button>
           ))}
+        </div>
+
+        {/* Presets — one-click layouts */}
+        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mt-3 mb-1.5 flex items-center gap-1">
+          <LayoutTemplate className="w-3 h-3" /> Quick layouts
+        </p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {BLOCK_PRESETS.map((preset) => {
+            const Icon = PRESET_ICON[preset.id] ?? LayoutTemplate
+            return (
+              <button
+                key={preset.id}
+                onClick={() => insertPreset(preset.id)}
+                title="Insert this layout"
+                className="flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md border text-[10px] text-center leading-tight
+                           text-muted-foreground hover:text-foreground hover:bg-accent hover:border-primary/40
+                           transition-colors cursor-pointer"
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                {preset.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -215,163 +258,6 @@ export default function BlocksPanel({ sectionConfig }: BlocksPanelProps) {
           </p>
         )}
       </div>
-
-      {/* Selected block editor */}
-      {activeBlock && (
-        <div className="border-t shrink-0 max-h-[48%] overflow-y-auto bg-muted/20">
-          <BlockEditor key={activeBlock.id} block={activeBlock} lang={activeLanguage} />
-        </div>
-      )}
     </div>
-  )
-}
-
-// ─────────────────────────────────────────────
-// Block editor — per-type content + shared style controls
-// ─────────────────────────────────────────────
-
-function BlockEditor({ block, lang }: { block: CustomBlock; lang: string }) {
-  const updateBlockContent = useEditorStore((s) => s.updateBlockContent)
-  const updateBlockProps = useEditorStore((s) => s.updateBlockProps)
-  const setActiveBlock = useEditorStore((s) => s.setActiveBlock)
-
-  const c = block.content[lang as keyof typeof block.content] ?? block.content.en ?? {}
-  const p = block.props
-  const langKey = lang as Parameters<typeof updateBlockContent>[1]
-
-  const setContent = (patch: Partial<typeof c>) => updateBlockContent(block.id, langKey, patch)
-
-  return (
-    <div className="p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground capitalize">
-          {block.type} settings
-        </p>
-        <button onClick={() => setActiveBlock(null)} className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer">
-          Done
-        </button>
-      </div>
-
-      {/* Content controls */}
-      {block.type === 'text' && (
-        <RichTextEditor value={c.html ?? ''} onChange={(v) => setContent({ html: v })} placeholder="Enter text…" />
-      )}
-
-      {block.type === 'image' && (
-        <div className="space-y-2">
-          <TextField label="Image URL" value={c.src ?? ''} onChange={(v) => setContent({ src: v })} placeholder="https://…" />
-          <TextField label="Alt text" value={c.alt ?? ''} onChange={(v) => setContent({ alt: v })} placeholder="Describe the image" />
-          <TextField label="Link URL (optional)" value={c.href ?? ''} onChange={(v) => setContent({ href: v })} placeholder="https://…" />
-          <NumberField label="Max width (px)" value={p.width ?? 560} onChange={(v) => updateBlockProps(block.id, { width: v })} />
-        </div>
-      )}
-
-      {block.type === 'button' && (
-        <div className="space-y-2">
-          <TextField label="Label" value={c.label ?? ''} onChange={(v) => setContent({ label: v })} placeholder="Click here" />
-          <TextField label="Link URL" value={c.href ?? ''} onChange={(v) => setContent({ href: v })} placeholder="https://…" />
-          <div className="grid grid-cols-2 gap-2">
-            <ColorField label="Button" value={p.buttonColor ?? '#ef5e5e'} onChange={(v) => updateBlockProps(block.id, { buttonColor: v })} />
-            <ColorField label="Text" value={p.buttonTextColor ?? '#ffffff'} onChange={(v) => updateBlockProps(block.id, { buttonTextColor: v })} />
-          </div>
-          <NumberField label="Corner radius (px)" value={p.borderRadius ?? 4} onChange={(v) => updateBlockProps(block.id, { borderRadius: v })} />
-        </div>
-      )}
-
-      {block.type === 'divider' && (
-        <div className="grid grid-cols-2 gap-2">
-          <ColorField label="Line color" value={p.lineColor ?? '#333333'} onChange={(v) => updateBlockProps(block.id, { lineColor: v })} />
-          <NumberField label="Thickness (px)" value={p.lineThickness ?? 1} onChange={(v) => updateBlockProps(block.id, { lineThickness: v })} />
-        </div>
-      )}
-
-      {block.type === 'spacer' && (
-        <NumberField label="Height (px)" value={p.height ?? 24} onChange={(v) => updateBlockProps(block.id, { height: v })} />
-      )}
-
-      {/* Text style extras */}
-      {block.type === 'text' && (
-        <div className="grid grid-cols-2 gap-2">
-          <NumberField label="Font size (px)" value={p.fontSize ?? 15} onChange={(v) => updateBlockProps(block.id, { fontSize: v })} />
-          <ColorField label="Text color" value={p.textColor ?? '#ffffff'} onChange={(v) => updateBlockProps(block.id, { textColor: v })} />
-        </div>
-      )}
-
-      {/* Shared style controls */}
-      {(block.type === 'text' || block.type === 'image' || block.type === 'button') && (
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-1">Alignment</p>
-          <div className="flex gap-1">
-            {(['left', 'center', 'right'] as const).map((a) => (
-              <button
-                key={a}
-                onClick={() => updateBlockProps(block.id, { align: a })}
-                className={cn(
-                  'flex-1 py-1 text-[11px] rounded border capitalize transition-colors cursor-pointer',
-                  (p.align ?? 'center') === a ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground hover:bg-accent'
-                )}
-              >
-                {a}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {block.type !== 'spacer' && (
-        <div className="grid grid-cols-2 gap-2">
-          <NumberField label="Padding top" value={p.paddingTop ?? 16} onChange={(v) => updateBlockProps(block.id, { paddingTop: v })} />
-          <NumberField label="Padding bottom" value={p.paddingBottom ?? 16} onChange={(v) => updateBlockProps(block.id, { paddingBottom: v })} />
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── small field helpers ──────────────────────
-
-function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return (
-    <label className="block">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-0.5 w-full px-2.5 py-1.5 text-xs rounded-md border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-      />
-    </label>
-  )
-}
-
-function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  return (
-    <label className="block">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-0.5 w-full px-2.5 py-1.5 text-xs rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-      />
-    </label>
-  )
-}
-
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="block">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <div className="mt-0.5 flex items-center gap-1.5 border rounded-md px-1.5 py-1 bg-background">
-        <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-5 w-6 rounded cursor-pointer bg-transparent" />
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 min-w-0 text-xs bg-transparent focus:outline-none"
-        />
-      </div>
-    </label>
   )
 }

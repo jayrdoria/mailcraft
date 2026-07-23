@@ -30,8 +30,84 @@ function makeBlock(type: BlockType): CustomBlock {
     case 'spacer':
       return { id, type, props: { height: 24 }, content: { en: {} } }
     case 'columns':
-      return { id, type, props: {}, content: { en: {} } } // Phase 9
+      // Starts as 2 empty columns; the user fills each with child blocks.
+      return { id, type, props: { columnCount: 2, columnGap: 16, paddingTop: 6, paddingBottom: 6 }, content: { en: {} }, columns: [[], []] }
   }
+}
+
+// ─────────────────────────────────────────────
+// PRESETS — one-click layouts so users don't rebuild common structures.
+// A preset returns all blocks to add to customBlocks, plus which ids go into
+// layoutOrder (children of a columns preset are added but stay out of layoutOrder).
+// ─────────────────────────────────────────────
+
+export type PresetId =
+  | 'thumbnails'
+  | 'imageTextButton'
+  | 'doubleImageTextButton'
+  | 'twoColCards'
+  | 'textButton'
+  | 'bannerButton'
+
+export const BLOCK_PRESETS: { id: PresetId; label: string }[] = [
+  { id: 'thumbnails',            label: '2-Col Thumbnails' },
+  { id: 'imageTextButton',       label: 'Image · Text · Button' },
+  { id: 'doubleImageTextButton', label: '2× Image · Text · Button' },
+  // Added layouts (mobile-first: 2-col ones stack full-width on phones):
+  { id: 'twoColCards',           label: '2-Col Cards' },
+  { id: 'textButton',            label: 'Text · Button' },
+  { id: 'bannerButton',          label: 'Banner · Button' },
+]
+
+function presetText(html: string): CustomBlock {
+  const b = makeBlock('text')
+  return { ...b, content: { en: { html } } }
+}
+function presetButton(label: string): CustomBlock {
+  const b = makeBlock('button')
+  return { ...b, content: { en: { label, href: '' } } }
+}
+
+function buildPreset(id: PresetId): { blocks: CustomBlock[]; layoutIds: string[] } {
+  if (id === 'thumbnails') {
+    const i1 = makeBlock('image'), t1 = presetText('<p>Label one</p>')
+    const i2 = makeBlock('image'), t2 = presetText('<p>Label two</p>')
+    const cols = makeBlock('columns')
+    cols.columns = [[i1.id, t1.id], [i2.id, t2.id]]
+    return { blocks: [i1, t1, i2, t2, cols], layoutIds: [cols.id] }
+  }
+  // Two side-by-side cards (image + text + button each). Stack on mobile.
+  if (id === 'twoColCards') {
+    const a = [makeBlock('image'), presetText('<p>Title one</p>'), presetButton('Learn more')]
+    const b = [makeBlock('image'), presetText('<p>Title two</p>'), presetButton('Learn more')]
+    const cols = makeBlock('columns')
+    cols.columns = [a.map((x) => x.id), b.map((x) => x.id)]
+    return { blocks: [...a, ...b, cols], layoutIds: [cols.id] }
+  }
+  // Simple CTA — text + button, grouped as one full-width item.
+  if (id === 'textButton') {
+    const kids = [presetText('<p>Your message here</p>'), presetButton('Learn more')]
+    const g = makeBlock('columns')
+    g.props = { ...g.props, columnCount: 1 }
+    g.columns = [kids.map((x) => x.id)]
+    return { blocks: [...kids, g], layoutIds: [g.id] }
+  }
+  // Promo banner — image + button, grouped as one full-width item.
+  if (id === 'bannerButton') {
+    const kids = [makeBlock('image'), presetButton('Shop now')]
+    const g = makeBlock('columns')
+    g.props = { ...g.props, columnCount: 1 }
+    g.columns = [kids.map((x) => x.id)]
+    return { blocks: [...kids, g], layoutIds: [g.id] }
+  }
+  // A stack of image → text → button, once or twice, grouped into a single-column
+  // container so it's ONE tidy layout item (same stacked full-width view).
+  const stack = (): CustomBlock[] => [makeBlock('image'), presetText('<p>Your text here</p>'), presetButton('Learn more')]
+  const children = id === 'doubleImageTextButton' ? [...stack(), ...stack()] : stack()
+  const group = makeBlock('columns')
+  group.props = { ...group.props, columnCount: 1 }
+  group.columns = [children.map((b) => b.id)]
+  return { blocks: [...children, group], layoutIds: [group.id] }
 }
 
 // Reconcile a saved layoutOrder against the current master sections + blocks:
@@ -135,6 +211,13 @@ interface EditorStore {
   updateBlockProps: (id: string, patch: Partial<BlockProps>) => void
   removeBlock: (id: string) => void
   moveLayoutItem: (fromIndex: number, toIndex: number) => void
+  // Columns child blocks (Phase 9) — children live in customBlocks, referenced by
+  // id in the columns block's `columns` array (not in layoutOrder).
+  insertPreset: (id: PresetId, atIndex?: number) => void
+  addColumnChild: (columnsId: string, colIndex: number, type: BlockType) => string
+  removeColumnChild: (columnsId: string, colIndex: number, childId: string) => void
+  moveColumnChild: (columnsId: string, colIndex: number, fromIdx: number, toIdx: number) => void
+  setColumnCount: (columnsId: string, count: number) => void
   setActiveBlock: (id: string | null) => void
   setActiveFieldKey: (key: string | null) => void
   setSidebarTab: (tab: 'content' | 'blocks') => void
@@ -261,12 +344,94 @@ export const useEditorStore = create<EditorStore>((set) => ({
     })),
 
   removeBlock: (id) =>
+    set((state) => {
+      // Removing a columns block also removes its child blocks (avoid orphans).
+      const block = state.customBlocks.find((b) => b.id === id)
+      const childIds = block?.type === 'columns' ? new Set((block.columns ?? []).flat()) : new Set<string>()
+      return {
+        isDirty: true,
+        customBlocks: state.customBlocks.filter((b) => b.id !== id && !childIds.has(b.id)),
+        layoutOrder: state.layoutOrder.filter((it) => !(it.kind === 'block' && it.id === id)),
+        activeBlockId: state.activeBlockId === id ? null : state.activeBlockId,
+      }
+    }),
+
+  insertPreset: (id, atIndex) =>
+    set((state) => {
+      const { blocks, layoutIds } = buildPreset(id)
+      const items = layoutIds.map((bid) => ({ kind: 'block' as const, id: bid }))
+      const layoutOrder = [...state.layoutOrder]
+      if (atIndex === undefined || atIndex < 0 || atIndex > layoutOrder.length) {
+        layoutOrder.push(...items)
+      } else {
+        layoutOrder.splice(atIndex, 0, ...items)
+      }
+      return {
+        customBlocks: [...state.customBlocks, ...blocks],
+        layoutOrder,
+        activeBlockId: layoutIds[0] ?? state.activeBlockId,
+        isDirty: true,
+      }
+    }),
+
+  addColumnChild: (columnsId, colIndex, type) => {
+    const child = makeBlock(type)
     set((state) => ({
       isDirty: true,
-      customBlocks: state.customBlocks.filter((b) => b.id !== id),
-      layoutOrder: state.layoutOrder.filter((it) => !(it.kind === 'block' && it.id === id)),
-      activeBlockId: state.activeBlockId === id ? null : state.activeBlockId,
+      customBlocks: [...state.customBlocks, child].map((b) => {
+        if (b.id !== columnsId) return b
+        const cols = (b.columns ?? []).map((c) => [...c])
+        while (cols.length <= colIndex) cols.push([])
+        cols[colIndex] = [...cols[colIndex], child.id]
+        return { ...b, columns: cols }
+      }),
+    }))
+    return child.id
+  },
+
+  removeColumnChild: (columnsId, colIndex, childId) =>
+    set((state) => ({
+      isDirty: true,
+      customBlocks: state.customBlocks
+        .filter((b) => b.id !== childId)
+        .map((b) =>
+          b.id === columnsId
+            ? { ...b, columns: (b.columns ?? []).map((c, i) => (i === colIndex ? c.filter((cid) => cid !== childId) : c)) }
+            : b
+        ),
     })),
+
+  moveColumnChild: (columnsId, colIndex, fromIdx, toIdx) =>
+    set((state) => ({
+      isDirty: true,
+      customBlocks: state.customBlocks.map((b) => {
+        if (b.id !== columnsId) return b
+        const cols = (b.columns ?? []).map((c) => [...c])
+        const col = cols[colIndex]
+        if (!col || fromIdx < 0 || toIdx < 0 || fromIdx >= col.length || toIdx >= col.length) return b
+        const [moved] = col.splice(fromIdx, 1)
+        col.splice(toIdx, 0, moved)
+        return { ...b, columns: cols }
+      }),
+    })),
+
+  setColumnCount: (columnsId, count) =>
+    set((state) => {
+      const block = state.customBlocks.find((b) => b.id === columnsId)
+      if (!block) return {}
+      const cols = (block.columns ?? []).map((c) => [...c])
+      // Children in dropped columns become orphans → remove them too.
+      const orphaned = new Set<string>()
+      for (let i = count; i < cols.length; i++) cols[i].forEach((id) => orphaned.add(id))
+      const newCols: string[][] = []
+      for (let i = 0; i < count; i++) newCols.push(cols[i] ?? [])
+      return {
+        isDirty: true,
+        customBlocks: state.customBlocks
+          .filter((b) => !orphaned.has(b.id))
+          .map((b) => (b.id === columnsId ? { ...b, columns: newCols, props: { ...b.props, columnCount: count } } : b)),
+      }
+    }),
 
   moveLayoutItem: (fromIndex, toIndex) =>
     set((state) => {

@@ -71,6 +71,8 @@ export const blockPropsSchema = z.object({
   lineColor:        z.string().optional(),
   lineThickness:    z.number().optional(),
   height:           z.number().optional(),
+  columnCount:      z.number().optional(),
+  columnGap:        z.number().optional(),
 })
 
 export const customBlockSchema = z.object({
@@ -78,6 +80,7 @@ export const customBlockSchema = z.object({
   type:    blockTypeSchema,
   props:   blockPropsSchema,
   content: z.record(languageSchema, blockContentSchema),
+  columns: z.array(z.array(z.string())).optional(), // columns block → child block ids per column
 })
 
 export const layoutItemSchema = z.discriminatedUnion('kind', [
