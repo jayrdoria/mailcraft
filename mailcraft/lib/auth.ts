@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import {
   googleAllowedDomains,
   isGoogleSsoEnabled,
+  isPasswordLoginEnabled,
   findUserForGoogle,
   checkGoogleSignIn,
 } from '@/lib/googleSso'
@@ -25,6 +26,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        // Second line of defence — loginAction also refuses when password login is off
+        if (!isPasswordLoginEnabled) return null
+
         const parsed = credentialsSchema.safeParse(credentials)
         if (!parsed.success) return null
 
@@ -42,7 +46,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         })
 
-        if (!user || !user.isActive) return null
+        // No passwordHash = Google-only account
+        if (!user || !user.isActive || !user.passwordHash) return null
 
         const passwordValid = await bcrypt.compare(
           parsed.data.password,

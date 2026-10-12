@@ -39,19 +39,21 @@ export async function getUserById(id: string) {
 export async function createUser(params: {
   email: string
   name: string
-  password: string
+  password?: string // omitted = Google-only account
   department: string
 }) {
   const { email, name, password, department } = params
 
-  const existing = await prisma.user.findUnique({ where: { email } })
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+  })
   if (existing) throw new Error('Email already in use')
 
   return prisma.user.create({
     data: {
       email,
       name,
-      passwordHash: await bcrypt.hash(password, 12),
+      passwordHash: password ? await bcrypt.hash(password, 12) : null,
       role: 'DEPARTMENT',
       department,
       isActive: true,

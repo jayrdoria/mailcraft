@@ -16,6 +16,27 @@ export const isGoogleSsoEnabled = Boolean(
     googleAllowedDomains.length > 0
 )
 
+// Password login is on unless PASSWORD_LOGIN_ENABLED=false — and always on when Google SSO
+// isn't configured, so a missing/broken Google env can never lock everyone out.
+// Break-glass: set PASSWORD_LOGIN_ENABLED=true and recreate the container; stored hashes still work.
+export const isPasswordLoginEnabled =
+  process.env.PASSWORD_LOGIN_ENABLED !== 'false' || !isGoogleSsoEnabled
+
+// True when the email can sign in with Google (its domain is an allowed Workspace domain)
+export function isGoogleSignInEmail(email: string): boolean {
+  return googleAllowedDomains.includes(email.trim().toLowerCase().split('@')[1] ?? '')
+}
+
+// Admin create/edit guard: an account must keep at least one working way to sign in.
+// Returns an error message, or null when the account is usable.
+export function accountSignInError(email: string, hasPassword: boolean): string | null {
+  const canUsePassword = hasPassword && isPasswordLoginEnabled
+  const canUseGoogle = isGoogleSsoEnabled && isGoogleSignInEmail(email)
+  if (canUsePassword || canUseGoogle) return null
+  if (!isGoogleSsoEnabled) return 'Password is required'
+  return `Email must be a ${googleAllowedDomains.map((d) => `@${d}`).join(' / ')} Google Workspace address`
+}
+
 export type GoogleSignInError = 'GoogleDomain' | 'GoogleNoAccount'
 
 interface GoogleProfileClaims {

@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getUserById } from '@/lib/services/userService'
 import AccountClient from '@/components/account/AccountClient'
+import { isPasswordLoginEnabled } from '@/lib/googleSso'
 
 export default async function AccountPage() {
   const session = await auth()
@@ -18,6 +19,7 @@ export default async function AccountPage() {
       role={user.role}
       department={user.department}
       createdAt={user.createdAt.toISOString()}
+      passwordEnabled={isPasswordLoginEnabled}
     />
   )
 }

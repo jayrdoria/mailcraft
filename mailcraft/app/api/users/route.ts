@@ -3,6 +3,7 @@ import { createUserSchema } from '@/lib/schemas'
 import { getAllUsers, createUser } from '@/lib/services/userService'
 import { prisma } from '@/lib/prisma'
 import * as activityService from '@/lib/services/activityService'
+import { accountSignInError, isPasswordLoginEnabled } from '@/lib/googleSso'
 
 // GET /api/users — list all accounts (admin only)
 export const GET = apiHandler(async () => {
@@ -23,6 +24,12 @@ export const POST = apiHandler(async (req) => {
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
   const { email, name, password, department, canAccessEmails } = parsed.data
+
+  if (password && !isPasswordLoginEnabled) {
+    return apiError('Password login is disabled — accounts sign in with Google', 400)
+  }
+  const signInError = accountSignInError(email, Boolean(password))
+  if (signInError) return apiError(signInError, 400)
 
   let user
   try {

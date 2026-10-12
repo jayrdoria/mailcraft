@@ -15,6 +15,7 @@ interface AccountClientProps {
   role: 'ADMIN' | 'DEPARTMENT'
   department: string | null
   createdAt: string
+  passwordEnabled: boolean
 }
 
 function formatDate(iso: string) {
@@ -35,7 +36,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
   )
 }
 
-export default function AccountClient({ name, email, role, department, createdAt }: AccountClientProps) {
+export default function AccountClient({ name, email, role, department, createdAt, passwordEnabled }: AccountClientProps) {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
 
   const mutation = useMutation({
@@ -74,7 +75,9 @@ export default function AccountClient({ name, email, role, department, createdAt
     <div className="p-6 max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">My Account</h1>
-        <p className="text-sm text-muted-foreground mt-1">Your profile details and password settings.</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {passwordEnabled ? 'Your profile details and password settings.' : 'Your profile details. You sign in with Google.'}
+        </p>
       </div>
 
       {/* Account Details */}
@@ -91,70 +94,72 @@ export default function AccountClient({ name, email, role, department, createdAt
         <InfoRow icon={Calendar} label="Member Since" value={formatDate(createdAt)} />
       </section>
 
-      {/* Change Password */}
-      <section className="rounded-xl border bg-card p-5">
-        <h2 className="text-sm font-semibold mb-1">Change Password</h2>
-        <p className="text-xs text-muted-foreground mb-5">
-          Enter your current password and choose a new one (minimum 8 characters).
-        </p>
+      {/* Change Password — hidden when password login is disabled */}
+      {passwordEnabled && (
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="text-sm font-semibold mb-1">Change Password</h2>
+          <p className="text-xs text-muted-foreground mb-5">
+            Enter your current password and choose a new one (minimum 8 characters).
+          </p>
 
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium block mb-1">Current Password</label>
-            <input
-              type="password"
-              value={form.currentPassword}
-              onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              autoComplete="current-password"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium block mb-1">New Password</label>
-            <input
-              type="password"
-              value={form.newPassword}
-              onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              autoComplete="new-password"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium block mb-1">Confirm New Password</label>
-            <input
-              type="password"
-              value={form.confirmPassword}
-              onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-              className={cn(
-                'w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring',
-                form.confirmPassword && form.newPassword !== form.confirmPassword
-                  ? 'border-destructive focus:ring-destructive'
-                  : ''
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium block mb-1">Current Password</label>
+              <input
+                type="password"
+                value={form.currentPassword}
+                onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+                className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                autoComplete="current-password"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">New Password</label>
+              <input
+                type="password"
+                value={form.newPassword}
+                onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
+                className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                autoComplete="new-password"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">Confirm New Password</label>
+              <input
+                type="password"
+                value={form.confirmPassword}
+                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                className={cn(
+                  'w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring',
+                  form.confirmPassword && form.newPassword !== form.confirmPassword
+                    ? 'border-destructive focus:ring-destructive'
+                    : ''
+                )}
+                autoComplete="new-password"
+              />
+              {form.confirmPassword && form.newPassword !== form.confirmPassword && (
+                <p className="text-[11px] text-destructive mt-1">Passwords do not match</p>
               )}
-              autoComplete="new-password"
-            />
-            {form.confirmPassword && form.newPassword !== form.confirmPassword && (
-              <p className="text-[11px] text-destructive mt-1">Passwords do not match</p>
-            )}
+            </div>
           </div>
-        </div>
 
-        <div className="mt-5 flex justify-end">
-          <button
-            onClick={() => mutation.mutate()}
-            disabled={!canSubmit}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md
-                       bg-primary text-primary-foreground hover:opacity-90
-                       disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {mutation.isPending
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <KeyRound className="w-3.5 h-3.5" />
-            }
-            {mutation.isPending ? 'Saving…' : 'Change Password'}
-          </button>
-        </div>
-      </section>
+          <div className="mt-5 flex justify-end">
+            <button
+              onClick={() => mutation.mutate()}
+              disabled={!canSubmit}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md
+                         bg-primary text-primary-foreground hover:opacity-90
+                         disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {mutation.isPending
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <KeyRound className="w-3.5 h-3.5" />
+              }
+              {mutation.isPending ? 'Saving…' : 'Change Password'}
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

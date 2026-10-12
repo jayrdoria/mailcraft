@@ -199,17 +199,18 @@ export const createImportSchema = z.object({
 // Users
 // ─────────────────────────────────────────────
 
+// Emails are stored lowercase so Google sign-in (case-insensitive) always finds exactly one match
 export const createUserSchema = z.object({
-  email:           z.string().email(),
+  email:           z.string().trim().toLowerCase().email(),
   name:            z.string().min(1).max(100),
-  password:        z.string().min(8),
+  password:        z.string().min(8).optional(), // omitted = Google-only account
   department:      z.string().min(1).max(50),
   canAccessEmails: z.boolean().default(true),
 })
 
 export const updateUserSchema = z.object({
   name:            z.string().min(1).max(100).optional(),
-  email:           z.string().email().optional(),
+  email:           z.string().trim().toLowerCase().email().optional(),
   department:      z.string().min(1).max(50).optional(),
   role:            z.enum(['ADMIN', 'DEPARTMENT']).optional(),
   isActive:        z.boolean().optional(),

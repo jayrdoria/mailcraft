@@ -4,8 +4,13 @@ import { signIn, signOut } from '@/lib/auth'
 import { AuthError } from 'next-auth'
 import { headers } from 'next/headers'
 import { rateLimit } from '@/lib/rateLimit'
+import { isPasswordLoginEnabled } from '@/lib/googleSso'
 
 export async function loginAction(formData: FormData) {
+  if (!isPasswordLoginEnabled) {
+    return { error: 'Password login is disabled. Use Sign in with Google.' }
+  }
+
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 

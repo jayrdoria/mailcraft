@@ -1,5 +1,5 @@
 import LoginCard from '@/components/auth/LoginCard'
-import { isGoogleSsoEnabled } from '@/lib/googleSso'
+import { isGoogleSsoEnabled, isPasswordLoginEnabled } from '@/lib/googleSso'
 
 export const metadata = {
   title: 'MailCraft',
@@ -24,7 +24,11 @@ export default async function LoginPage({
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-background">
-      <LoginCard googleEnabled={isGoogleSsoEnabled} errorMessage={errorMessage} />
+      <LoginCard
+        googleEnabled={isGoogleSsoEnabled}
+        passwordEnabled={isPasswordLoginEnabled}
+        errorMessage={errorMessage}
+      />
     </main>
   )
 }

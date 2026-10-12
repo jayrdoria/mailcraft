@@ -28,7 +28,23 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function CreateAccountSheet({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+interface AuthSettings {
+  passwordEnabled: boolean
+  googleEnabled: boolean
+  emailDomain: string | null
+}
+
+function CreateAccountSheet({
+  onClose,
+  onCreated,
+  auth,
+}: {
+  onClose: () => void
+  onCreated: () => void
+  auth: AuthSettings
+}) {
+  // Password is only required when there is no Google sign-in to fall back on
+  const passwordRequired = !auth.googleEnabled
   const [form, setForm] = useState({
     name: '', email: '', password: '', department: '', role: 'DEPARTMENT' as 'ADMIN' | 'DEPARTMENT',
   })
@@ -39,7 +55,11 @@ function CreateAccountSheet({ onClose, onCreated }: { onClose: () => void; onCre
       const res = await apiFetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, canAccessEmails: true }),
+        body: JSON.stringify({
+          ...form,
+          password: auth.passwordEnabled && form.password ? form.password : undefined,
+          canAccessEmails: true,
+        }),
       })
       if (!res.ok) {
         const json = await res.json()
@@ -93,18 +113,30 @@ function CreateAccountSheet({ onClose, onCreated }: { onClose: () => void; onCre
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="crm@mailcraft.internal"
+              placeholder={auth.emailDomain ? `name@${auth.emailDomain}` : 'crm@mailcraft.internal'}
             />
+            {auth.googleEnabled && auth.emailDomain && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Signs in with Google — must be an @{auth.emailDomain} Workspace account.
+              </p>
+            )}
           </div>
-          <div>
-            <label className="text-xs font-medium block mb-1">Temporary Password</label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
+          {auth.passwordEnabled && (
+            <div>
+              <label className="text-xs font-medium block mb-1">
+                Temporary Password
+                {!passwordRequired && (
+                  <span className="text-muted-foreground font-normal"> (optional — blank = Google only)</span>
+                )}
+              </label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          )}
           <div>
             <label className="text-xs font-medium block mb-1">Department</label>
             <input
@@ -133,7 +165,13 @@ function CreateAccountSheet({ onClose, onCreated }: { onClose: () => void; onCre
           </button>
           <button
             onClick={() => mutation.mutate()}
-            disabled={!form.name || !form.email || !form.password || mutation.isPending}
+            disabled={
+              !form.name ||
+              !form.email ||
+              (passwordRequired && !form.password) ||
+              (auth.passwordEnabled && !!form.password && form.password.length < 8) ||
+              mutation.isPending
+            }
             className="flex-1 py-2 text-xs font-medium rounded-md bg-primary text-primary-foreground
                        hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
@@ -149,10 +187,12 @@ function EditAccountSheet({
   user,
   onClose,
   onSaved,
+  passwordEnabled,
 }: {
   user: User
   onClose: () => void
   onSaved: () => void
+  passwordEnabled: boolean
 }) {
   const [form, setForm] = useState({
     name: user.name,
@@ -270,20 +310,22 @@ function EditAccountSheet({
             </button>
           </div>
 
-          <div className="border-t pt-4">
-            <label className="text-xs font-medium flex items-center gap-1.5 mb-1">
-              <KeyRound className="w-3 h-3" />
-              Reset Password
-              <span className="text-muted-foreground font-normal">(leave blank to keep current)</span>
-            </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="New password (min 8 chars)"
-              className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
+          {passwordEnabled && (
+            <div className="border-t pt-4">
+              <label className="text-xs font-medium flex items-center gap-1.5 mb-1">
+                <KeyRound className="w-3 h-3" />
+                Reset Password
+                <span className="text-muted-foreground font-normal">(leave blank to keep current)</span>
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New password (min 8 chars)"
+                className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          )}
         </div>
 
         <div className="px-5 py-4 border-t flex gap-2">
@@ -304,7 +346,7 @@ function EditAccountSheet({
   )
 }
 
-export default function AccountsClient() {
+export default function AccountsClient(auth: AuthSettings) {
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -476,6 +518,7 @@ export default function AccountsClient() {
         <CreateAccountSheet
           onClose={() => setShowCreate(false)}
           onCreated={() => qc.invalidateQueries({ queryKey: ['users'] })}
+          auth={auth}
         />
       )}
 
@@ -484,6 +527,7 @@ export default function AccountsClient() {
           user={editingUser}
           onClose={() => setEditingUser(null)}
           onSaved={() => qc.invalidateQueries({ queryKey: ['users'] })}
+          passwordEnabled={auth.passwordEnabled}
         />
       )}
     </div>

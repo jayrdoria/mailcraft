@@ -7,6 +7,8 @@ import {
   resetUserPassword,
 } from '@/lib/services/userService'
 import * as activityService from '@/lib/services/activityService'
+import { prisma } from '@/lib/prisma'
+import { accountSignInError, isPasswordLoginEnabled } from '@/lib/googleSso'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -39,6 +41,27 @@ export const PATCH = apiHandler(async (req, ctx) => {
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
   const { password, ...rest } = parsed.data
+
+  if (password && !isPasswordLoginEnabled) {
+    return apiError('Password login is disabled — accounts sign in with Google', 400)
+  }
+
+  if (rest.email || password) {
+    const current = await prisma.user.findUnique({ where: { id }, select: { passwordHash: true } })
+    const signInError = accountSignInError(
+      rest.email ?? existing.email,
+      Boolean(password || current?.passwordHash)
+    )
+    if (signInError) return apiError(signInError, 400)
+  }
+
+  if (rest.email) {
+    const taken = await prisma.user.findFirst({
+      where: { email: { equals: rest.email, mode: 'insensitive' }, NOT: { id } },
+      select: { id: true },
+    })
+    if (taken) return apiError('Email already in use', 409)
+  }
 
   if (Object.keys(rest).length > 0) {
     await updateUser(id, rest)

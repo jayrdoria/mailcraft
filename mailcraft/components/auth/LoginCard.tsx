@@ -8,10 +8,11 @@ import GoogleSignInButton from './GoogleSignInButton'
 
 interface LoginCardProps {
   googleEnabled: boolean
+  passwordEnabled: boolean
   errorMessage?: string
 }
 
-export default function LoginCard({ googleEnabled, errorMessage }: LoginCardProps) {
+export default function LoginCard({ googleEnabled, passwordEnabled, errorMessage }: LoginCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
 
   useGSAP(
@@ -53,18 +54,17 @@ export default function LoginCard({ googleEnabled, errorMessage }: LoginCardProp
         </p>
       )}
 
-      {googleEnabled && (
-        <>
-          <GoogleSignInButton />
-          <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            or sign in with email
-            <span className="h-px flex-1 bg-border" />
-          </div>
-        </>
+      {googleEnabled && <GoogleSignInButton />}
+
+      {googleEnabled && passwordEnabled && (
+        <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          or sign in with email
+          <span className="h-px flex-1 bg-border" />
+        </div>
       )}
 
-      <LoginForm />
+      {passwordEnabled && <LoginForm />}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import AccountsClient from '@/components/admin/AccountsClient'
+import { googleAllowedDomains, isGoogleSsoEnabled, isPasswordLoginEnabled } from '@/lib/googleSso'
 
 export const metadata = {
   title: 'Accounts — MailCraft Admin',
@@ -11,7 +12,11 @@ export default function AccountsPage() {
         <h1 className="text-xl font-semibold">Accounts</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Manage department accounts</p>
       </div>
-      <AccountsClient />
+      <AccountsClient
+        passwordEnabled={isPasswordLoginEnabled}
+        googleEnabled={isGoogleSsoEnabled}
+        emailDomain={googleAllowedDomains[0] ?? null}
+      />
     </div>
   )
 }
