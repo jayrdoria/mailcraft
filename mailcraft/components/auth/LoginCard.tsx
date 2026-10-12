@@ -4,8 +4,14 @@ import { useRef } from 'react'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
 import LoginForm from './LoginForm'
+import GoogleSignInButton from './GoogleSignInButton'
 
-export default function LoginCard() {
+interface LoginCardProps {
+  googleEnabled: boolean
+  errorMessage?: string
+}
+
+export default function LoginCard({ googleEnabled, errorMessage }: LoginCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
 
   useGSAP(
@@ -40,6 +46,24 @@ export default function LoginCard() {
         <h1 className="text-2xl font-bold tracking-tight">MailCraft</h1>
         <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
       </div>
+
+      {errorMessage && (
+        <p role="alert" className="mb-4 text-sm text-destructive text-center">
+          {errorMessage}
+        </p>
+      )}
+
+      {googleEnabled && (
+        <>
+          <GoogleSignInButton />
+          <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            or sign in with email
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      )}
+
       <LoginForm />
     </div>
   )

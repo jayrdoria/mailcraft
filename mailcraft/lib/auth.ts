@@ -1,8 +1,15 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
+import Google from 'next-auth/providers/google'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import {
+  googleAllowedDomains,
+  isGoogleSsoEnabled,
+  findUserForGoogle,
+  checkGoogleSignIn,
+} from '@/lib/googleSso'
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -53,6 +60,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       },
     }),
+    ...(isGoogleSsoEnabled
+      ? [
+          Google({
+            checks: ['pkce', 'state'],
+            authorization: {
+              params: {
+                prompt: 'select_account',
+                // UI hint only — the real domain check is in the signIn callback
+                ...(googleAllowedDomains.length === 1 && { hd: googleAllowedDomains[0] }),
+              },
+            },
+          }),
+        ]
+      : []),
   ],
   session: {
     strategy: 'jwt',
@@ -69,7 +90,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ account, profile }) {
+      if (account?.provider !== 'google') return true
+
+      const rejection = await checkGoogleSignIn(profile)
+      return rejection ? `/mailcraft/login?error=${rejection}` : true
+    },
+    async jwt({ token, user, account }) {
+      // Google: identity comes from Google, everything else from the DB row.
+      // token.id must be the DB user id (not Google's sub) so ownership checks match.
+      if (account?.provider === 'google') {
+        const dbUser = token.email ? await findUserForGoogle(token.email) : null
+        if (!dbUser) throw new Error('Google sign-in: account not found')
+        token.id = dbUser.id
+        token.email = dbUser.email
+        token.name = dbUser.name
+        token.role = dbUser.role
+        token.department = dbUser.department
+        token.canAccessEmails = dbUser.canAccessEmails
+        return token
+      }
       if (user) {
         token.id = user.id
         token.role = (user as { role: string }).role
@@ -88,5 +128,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   pages: {
     signIn: '/mailcraft/login',
+    // OAuth errors land on the login page (?error=...) instead of the bare Auth.js page.
+    // Credentials login is unaffected — server-action signIn throws instead of redirecting.
+    error: '/mailcraft/login',
   },
 })
