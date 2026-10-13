@@ -2,8 +2,12 @@ import type { BodyParagraph } from '@/lib/types/template'
 
 export type BodyAlignment = 'center' | 'left'
 
+// X7 Casino V2 (Midnight V3) body font — matches Approved Emails/X7 Casino V2
+const X7_V2_FONT = "'Manrope', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+
 function buildBase(brand: string, alignment: BodyAlignment): string {
-  const font = brand === 'X7'
+  const font = brand === 'X7_V2' ? X7_V2_FONT
+    : brand === 'X7'
     ? '&quot;Open Sans&quot;, sans-serif'
     : 'Roboto, sans-serif'
   const textAlign = alignment === 'left' ? 'text-align: justify;' : 'text-align: center;'
@@ -11,7 +15,7 @@ function buildBase(brand: string, alignment: BodyAlignment): string {
 }
 
 function renderList(html: string, brand: string, isLast: boolean, alignment: BodyAlignment): string {
-  const font = brand === 'X7' ? '&quot;Open Sans&quot;, sans-serif' : 'Roboto, sans-serif'
+  const font = brand === 'X7_V2' ? X7_V2_FONT : brand === 'X7' ? '&quot;Open Sans&quot;, sans-serif' : 'Roboto, sans-serif'
   const isOrdered = html.trimStart().startsWith('<ol')
   const bottomPadding = isLast ? '22px' : '14px'
   const textAlign = alignment === 'left' ? 'text-align: justify;' : 'text-align: center;'

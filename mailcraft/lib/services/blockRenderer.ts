@@ -37,6 +37,7 @@ export interface RenderBlockOptions {
 // ── helpers ──────────────────────────────────
 
 function fontFamily(brand?: string): string {
+  if (brand === 'X7_V2') return "'Manrope', 'Helvetica Neue', Helvetica, Arial, sans-serif"
   return brand === 'X7' ? "'Open Sans', sans-serif" : 'Roboto, sans-serif'
 }
 

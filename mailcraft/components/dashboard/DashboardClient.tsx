@@ -85,7 +85,9 @@ function BrandBadge({ brand }: { brand: BrandSlug }) {
         'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
         brand === 'STAKES' || brand === 'STAKES_CASINO'
           ? 'bg-stakes/15 text-stakes'
-          : 'bg-x7/15 text-x7'
+          : brand === 'X7_V2'
+            ? 'bg-x7v2/15 text-x7v2'
+            : 'bg-x7/15 text-x7'
       )}
     >
       {BRAND_LABELS[brand]}
@@ -437,7 +439,7 @@ function SharedTemplateCard({ s, onCopyClean }: SharedTemplateCardProps) {
             <Mail className="w-5 h-5 text-white/20" />
             <span
               className="text-[10px] font-semibold tracking-widest uppercase"
-              style={{ color: s.savedTemplate.masterTemplate.brand === 'X7' ? '#07d8f4' : '#ef5e5e' }}
+              style={{ color: s.savedTemplate.masterTemplate.brand === 'X7_V2' ? '#c80824' : s.savedTemplate.masterTemplate.brand === 'X7' ? '#07d8f4' : '#ef5e5e' }}
             >
               {BRAND_LABELS[s.savedTemplate.masterTemplate.brand]}
             </span>
@@ -944,7 +946,7 @@ export default function DashboardClient({ userName, initialFolderId = null }: Da
                          focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          {(['ALL', 'STAKES', 'STAKES_CASINO', 'X7'] as BrandFilter[]).map((b) => (
+          {(['ALL', 'STAKES', 'STAKES_CASINO', 'X7', 'X7_V2'] as BrandFilter[]).map((b) => (
             <button
               key={b}
               onClick={() => setBrandFilter(b)}
@@ -1097,7 +1099,7 @@ export default function DashboardClient({ userName, initialFolderId = null }: Da
                         <Mail className="w-5 h-5 text-white/20" />
                         <span
                           className="text-[10px] font-semibold tracking-widest uppercase"
-                          style={{ color: t.masterTemplate.brand === 'X7' ? '#07d8f4' : '#ef5e5e' }}
+                          style={{ color: t.masterTemplate.brand === 'X7_V2' ? '#c80824' : t.masterTemplate.brand === 'X7' ? '#07d8f4' : '#ef5e5e' }}
                         >
                           {BRAND_LABELS[t.masterTemplate.brand]}
                         </span>
@@ -1228,7 +1230,7 @@ export default function DashboardClient({ userName, initialFolderId = null }: Da
                         <Mail className="w-5 h-5 text-white/20" />
                         <span
                           className="text-[10px] font-semibold tracking-widest uppercase"
-                          style={{ color: m.brand === 'X7' ? '#07d8f4' : '#ef5e5e' }}
+                          style={{ color: m.brand === 'X7_V2' ? '#c80824' : m.brand === 'X7' ? '#07d8f4' : '#ef5e5e' }}
                         >
                           {BRAND_LABELS[m.brand]}
                         </span>

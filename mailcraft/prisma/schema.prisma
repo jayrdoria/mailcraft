@@ -20,6 +20,7 @@ enum Brand {
   STAKES
   STAKES_CASINO
   X7
+  X7_V2
 }
 
 enum Language {

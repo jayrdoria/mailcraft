@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { readTemplateHtml } from '@/lib/services/fileService'
+import { getMasterHtmlByLang } from '@/lib/services/masterPreviewService'
 import EditorClient from '@/components/editor/EditorClient'
 import type {
   TemplateFieldConfig,
@@ -90,6 +91,18 @@ export default async function EditorPage({ params }: EditorPageProps) {
     // HTML file not found
   }
 
+  // Per-language master HTML so each language tab previews its own hardcoded copy
+  // (e.g. the X7 unsubscribe line). EN stays in masterPreviewHtml above.
+  const rawHtmlByLang = await getMasterHtmlByLang(
+    saved.masterTemplate.id,
+    saved.masterTemplate.baseFilePath,
+    supportedLanguages.filter((lang) => lang !== 'en')
+  )
+  const masterPreviewHtmlByLang: Partial<Record<Language, string>> = {}
+  for (const [lang, html] of Object.entries(rawHtmlByLang)) {
+    masterPreviewHtmlByLang[lang as Language] = injectLockedFields(html, lockedFields)
+  }
+
   return (
     <EditorClient
       masterTemplate={{
@@ -105,6 +118,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
       customBlocks={customBlocks}
       layoutOrder={layoutOrder}
       masterPreviewHtml={masterPreviewHtml}
+      masterPreviewHtmlByLang={masterPreviewHtmlByLang}
       isOwner={isOwner}
       supportedLanguages={supportedLanguages}
       isImported={isImported}

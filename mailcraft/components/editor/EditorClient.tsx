@@ -59,6 +59,8 @@ interface EditorClientProps {
   customBlocks?: CustomBlock[] | null
   layoutOrder?: LayoutOrder | null
   masterPreviewHtml: string
+  // Non-EN master HTML (locked fields injected); missing languages fall back to masterPreviewHtml
+  masterPreviewHtmlByLang?: Partial<Record<Language, string>>
   isOwner: boolean
   supportedLanguages?: Language[]
   isImported?: boolean
@@ -75,6 +77,7 @@ export default function EditorClient({
   customBlocks = null,
   layoutOrder = null,
   masterPreviewHtml,
+  masterPreviewHtmlByLang = {},
   isOwner,
   supportedLanguages = LANGUAGES,
   isImported = false,
@@ -198,6 +201,7 @@ export default function EditorClient({
       fieldValues,
       sectionConfig,
       masterPreviewHtml,
+      masterPreviewHtmlByLang,
       supportedLanguages,
       openSetupModal: !isImported && sectionConfig.length === 0 && allSections.length > 0,
       allSectionNames: allSections.map((s) => s.name),
@@ -425,7 +429,9 @@ export default function EditorClient({
                 ? 'Stakes'
                 : masterTemplate.brand === 'STAKES_CASINO'
                   ? 'Stakes Casino'
-                  : 'X7 Casino'}
+                  : masterTemplate.brand === 'X7_V2'
+                    ? 'X7 Casino V2'
+                    : 'X7 Casino'}
             </span>
             <span>/</span>
             <span>{masterTemplate.name}</span>

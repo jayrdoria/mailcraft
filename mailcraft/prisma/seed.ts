@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import Redis from 'ioredis'
+import { X7_V2_SLUG, x7v2CreateData, x7v2UpdateData } from './templates/x7v2'
 
 const prisma = new PrismaClient()
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379')
@@ -607,6 +608,14 @@ async function main() {
     },
   })
   console.log(`✓ X7 Casino Template: ${x7JC.id}`)
+
+  // ── X7 Casino V2 — Template (config in prisma/templates/x7v2.ts) ──────────
+  const x7v2JC = await prisma.masterTemplate.upsert({
+    where: { slug: X7_V2_SLUG },
+    update: x7v2UpdateData(templateBaseDir),
+    create: x7v2CreateData(templateBaseDir),
+  })
+  console.log(`✓ X7 Casino V2 Template: ${x7v2JC.id}`)
 
   // Flush all mailcraft Redis caches so stale IDs never survive a reseed
   const keys = await redis.keys('mailcraft:*')

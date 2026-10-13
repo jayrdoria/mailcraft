@@ -38,7 +38,9 @@ function BrandBadge({ brand }: { brand: BrandSlug }) {
         'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
         brand === 'STAKES' || brand === 'STAKES_CASINO'
           ? 'bg-stakes/15 text-stakes'
-          : 'bg-x7/15 text-x7'
+          : brand === 'X7_V2'
+            ? 'bg-x7v2/15 text-x7v2'
+            : 'bg-x7/15 text-x7'
       )}
     >
       {BRAND_LABELS[brand]}

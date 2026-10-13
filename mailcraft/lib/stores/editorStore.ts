@@ -157,6 +157,8 @@ interface EditorStore {
 
   // Master HTML (fetched once — locked fields pre-injected, editable fields still {{TOKEN}})
   masterPreviewHtml: string
+  // Non-EN master HTML for the preview (same shape as masterPreviewHtml); missing → EN fallback
+  masterPreviewHtmlByLang: Partial<Record<Language, string>>
 
   // Setup config
   activeSections: string[]
@@ -199,6 +201,7 @@ interface EditorStore {
     fieldValues: MultiLanguageFieldValues
     sectionConfig: SavedSectionConfig[]
     masterPreviewHtml: string
+    masterPreviewHtmlByLang?: Partial<Record<Language, string>>
     supportedLanguages: Language[]
     openSetupModal: boolean
     allSectionNames?: string[]
@@ -250,6 +253,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
   savedTemplateId: null,
   brand: '',
   masterPreviewHtml: '',
+  masterPreviewHtmlByLang: {},
   activeSections: [],
   deletedSections: [],
   requiredFields: [],
@@ -296,6 +300,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
       layoutOrder,
       activeBlockId: null,
       masterPreviewHtml: data.masterPreviewHtml,
+      masterPreviewHtmlByLang: data.masterPreviewHtmlByLang ?? {},
       supportedLanguages: data.supportedLanguages,
       activeLanguage: data.supportedLanguages[0] ?? 'en',
       isDirty: false,
@@ -509,6 +514,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
     savedTemplateId: null,
     brand: '',
     masterPreviewHtml: '',
+    masterPreviewHtmlByLang: {},
     activeSections: [],
     deletedSections: [],
     requiredFields: [],

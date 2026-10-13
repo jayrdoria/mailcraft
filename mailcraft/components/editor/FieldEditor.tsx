@@ -68,6 +68,7 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const activeSections = useEditorStore((s) => s.activeSections)
   const deletedSections = useEditorStore((s) => s.deletedSections)
   const masterPreviewHtml = useEditorStore((s) => s.masterPreviewHtml)
+  const masterPreviewHtmlByLang = useEditorStore((s) => s.masterPreviewHtmlByLang)
   const setFieldValue = useEditorStore((s) => s.setFieldValue)
   const setRenderedHtml = useEditorStore((s) => s.setRenderedHtml)
   const requiredFields = useEditorStore((s) => s.requiredFields)
@@ -132,11 +133,13 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   )
 
   const currentLangValues = fieldValues[activeLanguage] ?? {}
+  // Active language's own master file (translated hardcoded copy); EN when it has none
+  const previewMasterHtml = masterPreviewHtmlByLang[activeLanguage] ?? masterPreviewHtml
 
   useEffect(() => {
-    updatePreview(masterPreviewHtml, currentLangValues, currentSectionConfig, brand, bodyAlignment, customBlocks, layoutOrder, activeLanguage)
+    updatePreview(previewMasterHtml, currentLangValues, currentSectionConfig, brand, bodyAlignment, customBlocks, layoutOrder, activeLanguage)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterPreviewHtml, fieldValues, activeSections, deletedSections, activeLanguage, bodyAlignment, customBlocks, layoutOrder])
+  }, [previewMasterHtml, fieldValues, activeSections, deletedSections, activeLanguage, bodyAlignment, customBlocks, layoutOrder])
 
   // Fields grouped by section
   const fieldsBySectionName = editableFields.reduce<Record<string, TemplateFieldConfig[]>>(

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getMasterTemplateById } from '@/lib/services/templateService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { readTemplateHtml } from '@/lib/services/fileService'
+import { getMasterHtmlByLang } from '@/lib/services/masterPreviewService'
 import EditorClient from '@/components/editor/EditorClient'
 import type {
   TemplateFieldConfig,
@@ -85,9 +86,22 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
     // HTML file not found
   }
 
+  // Per-language master HTML so each language tab previews its own hardcoded copy
+  // (e.g. the X7 unsubscribe line). EN stays in masterPreviewHtml above.
+  const rawHtmlByLang = await getMasterHtmlByLang(
+    masterId,
+    masterTemplate.baseFilePath,
+    supportedLanguages.filter((lang) => lang !== 'en')
+  )
+  const masterPreviewHtmlByLang: Partial<Record<Language, string>> = {}
+  for (const [lang, html] of Object.entries(rawHtmlByLang)) {
+    masterPreviewHtmlByLang[lang as Language] = injectLockedFields(html, lockedFields)
+  }
+
   const brandLabel =
     masterTemplate.brand === 'STAKES' ? 'Stakes'
     : masterTemplate.brand === 'STAKES_CASINO' ? 'Stakes Casino'
+    : masterTemplate.brand === 'X7_V2' ? 'X7 Casino V2'
     : 'X7 Casino'
   const defaultName = `${brandLabel} — ${masterTemplate.name}`
 
@@ -104,6 +118,7 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
       fieldValues={defaultFieldValues}
       sectionConfig={defaultSectionConfig}
       masterPreviewHtml={masterPreviewHtml}
+      masterPreviewHtmlByLang={masterPreviewHtmlByLang}
       isOwner={true}
       supportedLanguages={supportedLanguages}
       isImported={isImported}
