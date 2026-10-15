@@ -1,4 +1,5 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { requireScope, ownedWhere, scopeUserName } from '@/lib/services/accessService'
 import { toggleSectionSchema, deleteSectionSchema } from '@/lib/schemas'
 import { renderAndSaveAllLanguages, buildSectionTransformer } from '@/lib/services/renderService'
 import { prisma } from '@/lib/prisma'
@@ -62,13 +63,13 @@ async function rerender(saved: {
 
 // PATCH /api/sections/:savedId — toggle a section on or off
 export const PATCH = apiHandler(async (req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { savedId } = await (ctx as RouteContext).params
 
   const saved = await prisma.savedTemplate.findFirst({
-    where: { id: savedId, userId: session.user.id },
+    where: { id: savedId, ...ownedWhere(scope) },
     include: { masterTemplate: true },
   })
   if (!saved) return apiError('Template not found', 404)
@@ -101,7 +102,7 @@ export const PATCH = apiHandler(async (req, ctx) => {
 
   const updated = await prisma.savedTemplate.update({
     where: { id: savedId },
-    data: { sectionConfig: newConfig as unknown as object[] },
+    data: { sectionConfig: newConfig as unknown as object[], lastEditedById: scope.userId },
     include: { masterTemplate: true },
   })
 
@@ -112,13 +113,13 @@ export const PATCH = apiHandler(async (req, ctx) => {
 
 // DELETE /api/sections/:savedId — permanently delete a section
 export const DELETE = apiHandler(async (req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { savedId } = await (ctx as RouteContext).params
 
   const saved = await prisma.savedTemplate.findFirst({
-    where: { id: savedId, userId: session.user.id },
+    where: { id: savedId, ...ownedWhere(scope) },
     include: { masterTemplate: true },
   })
   if (!saved) return apiError('Template not found', 404)
@@ -151,7 +152,7 @@ export const DELETE = apiHandler(async (req, ctx) => {
 
   const updated = await prisma.savedTemplate.update({
     where: { id: savedId },
-    data: { sectionConfig: newConfig as unknown as object[] },
+    data: { sectionConfig: newConfig as unknown as object[], lastEditedById: scope.userId },
     include: { masterTemplate: true },
   })
 
@@ -159,8 +160,8 @@ export const DELETE = apiHandler(async (req, ctx) => {
 
   await activityService.log({
     action: 'SECTION_DELETED',
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? 'Unknown',
+    userId: scope.userId,
+    userName: scopeUserName(scope),
     savedTemplateId: savedId,
     savedTemplateName: saved.name,
     sectionName,

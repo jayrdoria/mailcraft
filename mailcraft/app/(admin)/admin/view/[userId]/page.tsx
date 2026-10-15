@@ -17,7 +17,7 @@ export default async function ViewUserPage({ params }: ViewUserPageProps) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true, department: true, email: true },
+    select: { name: true, department: true, email: true, role: true },
   })
 
   return (
@@ -39,6 +39,11 @@ export default async function ViewUserPage({ params }: ViewUserPageProps) {
             <p className="text-sm text-muted-foreground mt-0.5">
               {user?.department && `${user.department} — `}{user?.email}
             </p>
+            {user?.role === 'DEPARTMENT' && user.department && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Showing all templates of the {user.department} department (shared by every account in it)
+              </p>
+            )}
           </div>
           <div className="ml-2 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-500 text-xs font-medium">
             Viewing as Admin

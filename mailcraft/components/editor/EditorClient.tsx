@@ -19,6 +19,22 @@ class DuplicateNameError extends Error {
   }
 }
 
+// Someone else (e.g. another account in the same department) saved since this editor loaded
+class StaleWriteError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'StaleWriteError'
+  }
+}
+
+function staleWriteMessage(json: { updatedBy?: string | null; updatedAt?: string | null }): string {
+  const who = json.updatedBy ?? 'Someone else'
+  const when = json.updatedAt
+    ? ` at ${new Date(json.updatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+    : ''
+  return `${who} saved this template${when}. Reload to get their changes — your unsaved edits here will be lost.`
+}
+
 function normalizeGroup(group: string): string {
   return group.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
 }
@@ -54,6 +70,8 @@ interface EditorClientProps {
   masterTemplate: MasterTemplate
   savedTemplateId: string | null
   savedTemplateName: string
+  /** updatedAt the editor loaded — sent back on save so concurrent edits aren't overwritten */
+  savedUpdatedAt?: string | null
   fieldValues: MultiLanguageFieldValues
   sectionConfig: SavedSectionConfig[]
   customBlocks?: CustomBlock[] | null
@@ -72,6 +90,7 @@ export default function EditorClient({
   masterTemplate,
   savedTemplateId,
   savedTemplateName,
+  savedUpdatedAt = null,
   fieldValues,
   sectionConfig,
   customBlocks = null,
@@ -88,6 +107,7 @@ export default function EditorClient({
   const qc = useQueryClient()
   const headerRef = useRef<HTMLDivElement>(null)
   const setupGearRef = useRef<HTMLButtonElement>(null)
+  const lastKnownUpdatedAt = useRef<string | null>(savedUpdatedAt)
 
   const init = useEditorStore((s) => s.init)
   const isSetupModalOpen = useEditorStore((s) => s.isSetupModalOpen)
@@ -307,16 +327,21 @@ export default function EditorClient({
       const res = await apiFetch(`/api/templates/saved/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          ...(lastKnownUpdatedAt.current ? { expectedUpdatedAt: lastKnownUpdatedAt.current } : {}),
+        }),
       })
       if (!res.ok) {
         const json = await res.json()
+        if (res.status === 409 && json.code === 'STALE_WRITE') throw new StaleWriteError(staleWriteMessage(json))
         if (res.status === 409) throw new DuplicateNameError(json.error ?? 'Duplicate name')
         throw new Error(json.error ?? 'Save failed')
       }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (json) => {
+      lastKnownUpdatedAt.current = json.data?.updatedAt ?? null
       qc.invalidateQueries({ queryKey: ['saved-templates'] })
       qc.invalidateQueries({ queryKey: ['activity', currentSavedId ?? savedTemplateId] })
       toast.success('Template saved')
@@ -324,7 +349,12 @@ export default function EditorClient({
       setIsSaving(false)
     },
     onError: (err: Error) => {
-      if (err.name === 'DuplicateNameError') {
+      if (err.name === 'StaleWriteError') {
+        toast.error(err.message, {
+          duration: Infinity,
+          action: { label: 'Reload', onClick: () => window.location.reload() },
+        })
+      } else if (err.name === 'DuplicateNameError') {
         setNameError(err.message)
       } else {
         toast.error(err.message)

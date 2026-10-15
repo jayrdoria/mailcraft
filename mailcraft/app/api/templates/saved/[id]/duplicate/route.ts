@@ -1,4 +1,5 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { requireScope, ownedWhere, ownershipData, scopeUserName } from '@/lib/services/accessService'
 import { prisma } from '@/lib/prisma'
 import { getSavedTemplatePath } from '@/lib/services/fileService'
 import * as activityService from '@/lib/services/activityService'
@@ -7,15 +8,15 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-// POST /api/templates/saved/:id/duplicate — clone a saved template for the current user
+// POST /api/templates/saved/:id/duplicate — clone a saved template within the owning department/user
 export const POST = apiHandler(async (_req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { id } = await (ctx as RouteContext).params
 
   const source = await prisma.savedTemplate.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, ...ownedWhere(scope) },
     include: { masterTemplate: { select: { name: true } } },
   })
   if (!source) return apiError('Template not found', 404)
@@ -23,7 +24,7 @@ export const POST = apiHandler(async (_req, ctx) => {
   // Resolve a unique name: "Copy of X" → "Copy of X (2)" → "Copy of X (3)" …
   const baseName = `Copy of ${source.name}`
   const existing = await prisma.savedTemplate.findMany({
-    where: { userId: session.user.id, name: { startsWith: baseName } },
+    where: { ...ownedWhere(scope), name: { startsWith: baseName } },
     select: { name: true },
   })
   const takenNames = new Set(existing.map((t) => t.name))
@@ -36,7 +37,8 @@ export const POST = apiHandler(async (_req, ctx) => {
 
   const copy = await prisma.savedTemplate.create({
     data: {
-      userId: session.user.id,
+      ...ownershipData(scope),
+      lastEditedById: scope.userId,
       masterTemplateId: source.masterTemplateId,
       name: candidateName,
       fieldValues: source.fieldValues ?? {},
@@ -47,13 +49,13 @@ export const POST = apiHandler(async (_req, ctx) => {
   // Set renderedBasePath now that we have an ID (same pattern as createSavedTemplate)
   await prisma.savedTemplate.update({
     where: { id: copy.id },
-    data: { renderedBasePath: getSavedTemplatePath(session.user.id, copy.id) },
+    data: { renderedBasePath: getSavedTemplatePath(scope.userId, copy.id) },
   })
 
   await activityService.log({
     action: 'TEMPLATE_CLONED',
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? 'Unknown',
+    userId: scope.userId,
+    userName: scopeUserName(scope),
     savedTemplateId: copy.id,
     savedTemplateName: copy.name,
     masterTemplateName: source.masterTemplate.name,

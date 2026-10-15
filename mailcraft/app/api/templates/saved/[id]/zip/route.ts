@@ -1,4 +1,5 @@
-import { apiError, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiHandler } from '@/lib/api'
+import { requireScope, readableTemplateWhere, scopeUserName } from '@/lib/services/accessService'
 import { renderTemplate, buildSectionTransformer } from '@/lib/services/renderService'
 import { cleanHtml } from '@/lib/services/sectionService'
 import { prisma } from '@/lib/prisma'
@@ -20,22 +21,12 @@ interface RouteContext {
 
 // GET /api/templates/saved/:id/zip — download all language clean HTML files as ZIP
 export const GET = apiHandler(async (_req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { id } = await (ctx as RouteContext).params
-  const isAdmin = session.user.role === 'ADMIN'
-
   const saved = await prisma.savedTemplate.findFirst({
-    where: isAdmin
-      ? { id }
-      : {
-          id,
-          OR: [
-            { userId: session.user.id },
-            { sharedWith: { some: { sharedWithId: session.user.id } } },
-          ],
-        },
+    where: { id, ...readableTemplateWhere(scope) },
     include: { masterTemplate: true },
   })
   if (!saved) return apiError('Template not found', 404)
@@ -86,8 +77,8 @@ export const GET = apiHandler(async (_req, ctx) => {
 
   await activityService.log({
     action: 'HTML_DOWNLOADED',
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? 'Unknown',
+    userId: scope.userId,
+    userName: scopeUserName(scope),
     savedTemplateId: saved.id,
     savedTemplateName: saved.name,
     htmlType: 'zip',

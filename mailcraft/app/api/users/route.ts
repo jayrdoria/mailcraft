@@ -1,6 +1,6 @@
 import { apiError, apiSuccess, apiHandler, requireAdmin } from '@/lib/api'
 import { createUserSchema } from '@/lib/schemas'
-import { getAllUsers, createUser } from '@/lib/services/userService'
+import { getAllUsers, createUser, canonicalDepartment } from '@/lib/services/userService'
 import { prisma } from '@/lib/prisma'
 import * as activityService from '@/lib/services/activityService'
 import { accountSignInError, isPasswordLoginEnabled } from '@/lib/googleSso'
@@ -23,7 +23,8 @@ export const POST = apiHandler(async (req) => {
   const parsed = createUserSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
-  const { email, name, password, department, canAccessEmails } = parsed.data
+  const { email, name, password, role, canAccessEmails } = parsed.data
+  const department = await canonicalDepartment(parsed.data.department)
 
   if (password && !isPasswordLoginEnabled) {
     return apiError('Password login is disabled — accounts sign in with Google', 400)
@@ -33,7 +34,7 @@ export const POST = apiHandler(async (req) => {
 
   let user
   try {
-    user = await createUser({ email, name, password, department })
+    user = await createUser({ email, name, password, department, role })
   } catch (err) {
     if (err instanceof Error && err.message === 'Email already in use') {
       return apiError('Email already in use', 409)

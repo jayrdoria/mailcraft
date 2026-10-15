@@ -5,6 +5,7 @@ import {
   updateUser,
   deactivateUser,
   resetUserPassword,
+  canonicalDepartment,
 } from '@/lib/services/userService'
 import * as activityService from '@/lib/services/activityService'
 import { prisma } from '@/lib/prisma'
@@ -41,6 +42,8 @@ export const PATCH = apiHandler(async (req, ctx) => {
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
   const { password, ...rest } = parsed.data
+  // Moving an account between departments moves the account only — data stays with the department
+  if (rest.department) rest.department = await canonicalDepartment(rest.department)
 
   if (password && !isPasswordLoginEnabled) {
     return apiError('Password login is disabled — accounts sign in with Google', 400)

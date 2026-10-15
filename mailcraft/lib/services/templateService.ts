@@ -61,12 +61,16 @@ export async function createSavedTemplate(params: {
   customBlocks?: CustomBlock[]
   layoutOrder?: LayoutOrder
   folderId?: string | null
+  /** Owning department key (null = personal) — see accessService.ownershipData */
+  department?: string | null
 }) {
-  const { userId, masterTemplateId, name, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId } = params
+  const { userId, masterTemplateId, name, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId, department } = params
 
   const saved = await prisma.savedTemplate.create({
     data: {
       userId,
+      department: department ?? null,
+      lastEditedById: userId,
       masterTemplateId,
       name,
       fieldValues: fieldValues as object,

@@ -1,4 +1,5 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { requireScope } from '@/lib/services/accessService'
 import { prisma } from '@/lib/prisma'
 import { ActivityAction } from '@prisma/client'
 const DEFAULT_PAGE_SIZE = 50
@@ -9,14 +10,14 @@ const VALID_ACTIONS = new Set([
   'ACCOUNT_CREATED', 'ACCOUNT_DEACTIVATED',
 ])
 
-// GET /api/activity — activity logs (admin: all, department: own)
+// GET /api/activity — activity logs (admin: all, department account: whole department, else own)
 // Query: ?userId=&action=&from=&to=&savedTemplateId=&limit=&page=
 export const GET = apiHandler(async (req) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const url = new URL(req.url)
-  const isAdmin = session.user.role === 'ADMIN'
+  const isAdmin = scope.isAdmin
 
   const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10))
   const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') ?? String(DEFAULT_PAGE_SIZE), 10)))
@@ -28,13 +29,11 @@ export const GET = apiHandler(async (req) => {
   const from = url.searchParams.get('from') ?? undefined
   const to = url.searchParams.get('to') ?? undefined
 
-  // Admin can filter by userId; department users are always filtered to themselves
-  const userId = isAdmin
-    ? (url.searchParams.get('userId') ?? undefined)
-    : session.user.id
+  // Admin can filter by userId; everyone else sees their department's activity (or just their own)
+  const userId = isAdmin ? (url.searchParams.get('userId') ?? undefined) : undefined
 
   const where = {
-    ...(userId ? { userId } : {}),
+    ...(isAdmin ? (userId ? { userId } : {}) : { userId: { in: scope.memberIds } }),
     ...(action ? { action: action as ActivityAction } : {}),
     ...(savedTemplateId ? { savedTemplateId } : {}),
     ...(from || to
@@ -53,6 +52,8 @@ export const GET = apiHandler(async (req) => {
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
+      // Accounts in a department can share a display name — email tells them apart
+      include: { user: { select: { email: true } } },
     }),
     prisma.activityLog.count({ where }),
   ])

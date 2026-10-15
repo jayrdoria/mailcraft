@@ -57,7 +57,8 @@ model User {
   isActive     Boolean @default(true)
   canAccessEmails Boolean @default(true)
 
-  savedTemplates        SavedTemplate[]
+  savedTemplates        SavedTemplate[]  @relation("TemplateCreator")
+  editedTemplates       SavedTemplate[]  @relation("TemplateLastEditor")
   templatesSharedByMe   SharedTemplate[] @relation("SharedBy")
   templatesSharedWithMe SharedTemplate[] @relation("SharedWith")
   activityLogs          ActivityLog[]
@@ -112,10 +113,17 @@ model MasterTemplate {
 // ─────────────────────────────────────────────
 
 model SavedTemplate {
-  id               String @id @default(cuid())
+  id               String  @id @default(cuid())
   name             String
-  userId           String
+  // Creator. Nullable so deleting an account never deletes templates (SetNull).
+  userId           String?
   masterTemplateId String
+
+  // Owning department key (normalized, e.g. "CRM"). Set = shared by every account in
+  // that department. Null = personal (admin / accounts without a department).
+  department String?
+
+  lastEditedById String?
 
   // JSON: MultiLanguageFieldValues — { en: { BANNER_URL: "...", ... }, fr: {...}, ... }
   fieldValues Json
@@ -139,13 +147,15 @@ model SavedTemplate {
 
   sharedWith SharedTemplate[]
 
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User?          @relation("TemplateCreator", fields: [userId], references: [id], onDelete: SetNull)
+  lastEditedBy   User?          @relation("TemplateLastEditor", fields: [lastEditedById], references: [id], onDelete: SetNull)
   masterTemplate MasterTemplate @relation(fields: [masterTemplateId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([department])
   @@index([masterTemplateId])
   @@map("saved_templates")
 }
@@ -155,11 +165,14 @@ model SavedTemplate {
 // ─────────────────────────────────────────────
 
 model Folder {
-  id     String @id @default(cuid())
+  id     String  @id @default(cuid())
   name   String
-  userId String
+  // Creator. Nullable so deleting an account never deletes folders (SetNull).
+  userId String?
+  // Owning department key — same semantics as SavedTemplate.department
+  department String?
 
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   templates SavedTemplate[]
 
   createdAt DateTime @default(now())
@@ -167,6 +180,7 @@ model Folder {
 
   @@unique([userId, name])
   @@index([userId])
+  @@index([department])
   @@map("folders")
 }
 
@@ -199,7 +213,7 @@ model SharedTemplate {
 model ActivityLog {
   id     String         @id @default(cuid())
   action ActivityAction
-  userId String
+  userId String? // null once the account is deleted — userName keeps the record readable
   userName String
 
   savedTemplateId    String?

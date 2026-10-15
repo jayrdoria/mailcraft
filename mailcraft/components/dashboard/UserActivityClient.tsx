@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { emailHandle } from '@/lib/utils'
 
 const ACTION_LABELS: Record<string, string> = {
   TEMPLATE_CLONED: 'Template Cloned',
@@ -33,6 +34,8 @@ const ACTION_COLORS: Record<string, string> = {
 interface LogEntry {
   id: string
   action: string
+  userName: string
+  user: { email: string } | null
   savedTemplateName: string | null
   masterTemplateName: string | null
   targetAccountName: string | null
@@ -113,6 +116,7 @@ export default function UserActivityClient() {
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Action</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Template</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">By</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Time</th>
               </tr>
             </thead>
@@ -126,6 +130,9 @@ export default function UserActivityClient() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {l.savedTemplateName ?? l.targetAccountName ?? '—'}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground" title={l.user?.email}>
+                    {l.user ? emailHandle(l.user.email) : l.userName}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(l.createdAt)}</td>
                 </tr>

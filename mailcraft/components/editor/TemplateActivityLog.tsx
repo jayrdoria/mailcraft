@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
+import { emailHandle } from '@/lib/utils'
 import {
   ChevronDown, ChevronUp, ClipboardCopy, Save, Trash2,
   Download, GitBranch, Plus,
@@ -23,6 +24,7 @@ interface LogEntry {
   id: string
   action: string
   userName: string
+  user: { email: string } | null
   createdAt: string
   savedTemplateName: string | null
   masterTemplateName: string | null
@@ -142,7 +144,7 @@ export default function TemplateActivityLog({ savedTemplateId }: { savedTemplate
                     </p>
                   )}
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {log.userName} · {formatRelativeTime(log.createdAt)}
+                    {log.user ? emailHandle(log.user.email) : log.userName} · {formatRelativeTime(log.createdAt)}
                   </p>
                 </div>
               </div>

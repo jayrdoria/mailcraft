@@ -1,13 +1,14 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { requireScope } from '@/lib/services/accessService'
 import { prisma } from '@/lib/prisma'
 
-// GET /api/share/received — templates shared with the current user
+// GET /api/share/received — templates shared with the current user (or any member of their department)
 export const GET = apiHandler(async () => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const shared = await prisma.sharedTemplate.findMany({
-    where: { sharedWithId: session.user.id },
+    where: { sharedWithId: { in: scope.memberIds } },
     include: {
       savedTemplate: {
         include: {

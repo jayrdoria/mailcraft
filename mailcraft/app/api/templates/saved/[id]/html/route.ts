@@ -1,4 +1,5 @@
-import { apiError, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiHandler } from '@/lib/api'
+import { requireScope, readableTemplateWhere, scopeUserName } from '@/lib/services/accessService'
 import { renderTemplate, buildSectionTransformer } from '@/lib/services/renderService'
 import { prisma } from '@/lib/prisma'
 import * as activityService from '@/lib/services/activityService'
@@ -19,8 +20,8 @@ const VALID_LANGS: Language[] = ['en', 'fr', 'frca', 'de', 'it', 'es']
 
 // GET /api/templates/saved/:id/html?lang=en — render HTML with section markers (editor view)
 export const GET = apiHandler(async (req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { id } = await (ctx as RouteContext).params
 
@@ -28,18 +29,8 @@ export const GET = apiHandler(async (req, ctx) => {
   const rawLang = url.searchParams.get('lang') ?? 'en'
   const lang = VALID_LANGS.includes(rawLang as Language) ? (rawLang as Language) : 'en'
 
-  const isAdmin = session.user.role === 'ADMIN'
-
   const saved = await prisma.savedTemplate.findFirst({
-    where: isAdmin
-      ? { id }
-      : {
-          id,
-          OR: [
-            { userId: session.user.id },
-            { sharedWith: { some: { sharedWithId: session.user.id } } },
-          ],
-        },
+    where: { id, ...readableTemplateWhere(scope) },
     include: { masterTemplate: true },
   })
   if (!saved) return apiError('Template not found', 404)
@@ -73,8 +64,8 @@ export const GET = apiHandler(async (req, ctx) => {
 
   await activityService.log({
     action: 'HTML_COPIED',
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? 'Unknown',
+    userId: scope.userId,
+    userName: scopeUserName(scope),
     savedTemplateId: saved.id,
     savedTemplateName: saved.name,
     htmlType: 'full',

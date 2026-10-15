@@ -1,5 +1,21 @@
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { departmentKey } from '@/lib/department'
+
+/**
+ * Reuse the spelling of an existing department when the input matches it
+ * case-insensitively ("crm" → "CRM"), so one team never ends up split in two.
+ */
+export async function canonicalDepartment(input: string): Promise<string> {
+  const key = departmentKey(input)
+  if (!key) return input
+  const existing = await prisma.user.findMany({
+    where: { department: { not: null } },
+    select: { department: true },
+    orderBy: { createdAt: 'asc' },
+  })
+  return existing.find((u) => departmentKey(u.department) === key)?.department ?? input
+}
 
 export async function getAllUsers() {
   return prisma.user.findMany({
@@ -41,8 +57,9 @@ export async function createUser(params: {
   name: string
   password?: string // omitted = Google-only account
   department: string
+  role?: 'ADMIN' | 'DEPARTMENT'
 }) {
-  const { email, name, password, department } = params
+  const { email, name, password, department, role = 'DEPARTMENT' } = params
 
   const existing = await prisma.user.findFirst({
     where: { email: { equals: email, mode: 'insensitive' } },
@@ -54,7 +71,7 @@ export async function createUser(params: {
       email,
       name,
       passwordHash: password ? await bcrypt.hash(password, 12) : null,
-      role: 'DEPARTMENT',
+      role,
       department,
       isActive: true,
       canAccessEmails: true,

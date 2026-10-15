@@ -1,4 +1,5 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { requireScope, ownedWhere, isOwnedBy, ownershipData, scopeUserName } from '@/lib/services/accessService'
 import { createSavedTemplateSchema } from '@/lib/schemas'
 import { getMasterTemplateById, createSavedTemplate } from '@/lib/services/templateService'
 import { renderAndSaveAllLanguages, buildSectionTransformer } from '@/lib/services/renderService'
@@ -14,21 +15,22 @@ import type {
 } from '@/lib/types/template'
 import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 
-// GET /api/templates/saved — list current user's saved templates + shared with me
+// GET /api/templates/saved — list my (department's) saved templates + shared with me (or my department)
 export const GET = apiHandler(async () => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
-  const [own, shared] = await Promise.all([
+  const [own, sharedRaw] = await Promise.all([
     prisma.savedTemplate.findMany({
-      where: { userId: session.user.id, masterTemplate: { isImported: false } },
+      where: { ...ownedWhere(scope), masterTemplate: { isImported: false } },
       include: {
         masterTemplate: { select: { id: true, name: true, brand: true, slug: true, languages: true, editableFields: true } },
+        lastEditedBy: { select: { id: true, name: true, email: true } },
       },
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.sharedTemplate.findMany({
-      where: { sharedWithId: session.user.id },
+      where: { sharedWithId: { in: scope.memberIds } },
       include: {
         savedTemplate: {
           include: {
@@ -41,6 +43,15 @@ export const GET = apiHandler(async () => {
       orderBy: { createdAt: 'desc' },
     }),
   ])
+
+  // Skip shares of templates we already own, and show a template shared with
+  // several members of the same department only once
+  const seenShared = new Set<string>()
+  const shared = sharedRaw.filter((s) => {
+    if (isOwnedBy(scope, s.savedTemplate) || seenShared.has(s.savedTemplateId)) return false
+    seenShared.add(s.savedTemplateId)
+    return true
+  })
 
   function extractPreview(
     fieldValues: Record<string, Record<string, unknown>> | null,
@@ -78,8 +89,8 @@ export const GET = apiHandler(async () => {
 
 // POST /api/templates/saved — clone a master template into a new saved template
 export const POST = apiHandler(async (req) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const body = await req.json()
   const parsed = createSavedTemplateSchema.safeParse(body)
@@ -87,17 +98,17 @@ export const POST = apiHandler(async (req) => {
 
   const { name, masterTemplateId, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId } = parsed.data
 
-  // Reject duplicate names per user
+  // Reject duplicate names within the owning scope (department or personal)
   const nameConflict = await prisma.savedTemplate.findFirst({
-    where: { userId: session.user.id, name },
+    where: { ...ownedWhere(scope), name },
     select: { id: true },
   })
   if (nameConflict) return apiError('A template with that name already exists', 409)
 
-  // Verify folderId belongs to this user
+  // Verify folderId belongs to the same scope
   if (folderId) {
     const folder = await prisma.folder.findFirst({
-      where: { id: folderId, userId: session.user.id },
+      where: { id: folderId, ...ownedWhere(scope) },
       select: { id: true },
     })
     if (!folder) return apiError('Folder not found', 404)
@@ -135,7 +146,7 @@ export const POST = apiHandler(async (req) => {
   }
 
   const saved = await createSavedTemplate({
-    userId: session.user.id,
+    ...ownershipData(scope),
     masterTemplateId,
     name,
     fieldValues: initialFieldValues,
@@ -178,8 +189,8 @@ export const POST = apiHandler(async (req) => {
 
   await activityService.log({
     action: 'TEMPLATE_CLONED',
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? 'Unknown',
+    userId: scope.userId,
+    userName: scopeUserName(scope),
     savedTemplateId: saved.id,
     savedTemplateName: saved.name,
     masterTemplateName: master.name,

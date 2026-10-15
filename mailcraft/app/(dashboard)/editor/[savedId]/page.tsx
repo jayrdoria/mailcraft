@@ -5,6 +5,7 @@ import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { readTemplateHtml } from '@/lib/services/fileService'
 import { getMasterHtmlByLang } from '@/lib/services/masterPreviewService'
 import EditorClient from '@/components/editor/EditorClient'
+import { getScope, readableTemplateWhere, isOwnedBy } from '@/lib/services/accessService'
 import type {
   TemplateFieldConfig,
   LockedFieldConfig,
@@ -42,24 +43,19 @@ export default async function EditorPage({ params }: EditorPageProps) {
   if (!session) redirect('/login')
 
   const { savedId } = await params
-  const isAdmin = session.user.role === 'ADMIN'
+
+  // Department + active status come from the DB, not the session token
+  const scope = await getScope(session.user.id)
+  if (!scope) redirect('/dashboard')
 
   const saved = await prisma.savedTemplate.findFirst({
-    where: isAdmin
-      ? { id: savedId }
-      : {
-          id: savedId,
-          OR: [
-            { userId: session.user.id },
-            { sharedWith: { some: { sharedWithId: session.user.id } } },
-          ],
-        },
+    where: { id: savedId, ...readableTemplateWhere(scope) },
     include: { masterTemplate: true },
   })
 
   if (!saved) redirect('/dashboard')
 
-  const isOwner = saved.userId === session.user.id || isAdmin
+  const isOwner = isOwnedBy(scope, saved) || scope.isAdmin
   const templateFolderId = (saved as unknown as { folderId?: string | null }).folderId ?? null
   const editableFields = saved.masterTemplate.editableFields as unknown as TemplateFieldConfig[]
   const lockedFields = saved.masterTemplate.lockedFields as unknown as LockedFieldConfig[]
@@ -113,6 +109,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
       }}
       savedTemplateId={saved.id}
       savedTemplateName={saved.name}
+      savedUpdatedAt={saved.updatedAt.toISOString()}
       fieldValues={fieldValues}
       sectionConfig={sectionConfig}
       customBlocks={customBlocks}

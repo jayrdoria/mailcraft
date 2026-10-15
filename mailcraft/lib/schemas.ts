@@ -137,6 +137,8 @@ export const updateSavedTemplateSchema = z.object({
   customBlocks:  z.array(customBlockSchema).optional(),
   layoutOrder:   layoutOrderSchema.optional(),
   folderId:      z.string().cuid().nullable().optional(),
+  // Optimistic concurrency: the updatedAt the editor loaded. Stale → 409 instead of overwriting.
+  expectedUpdatedAt: z.string().datetime().optional(),
 })
 
 // ─────────────────────────────────────────────
@@ -204,14 +206,15 @@ export const createUserSchema = z.object({
   email:           z.string().trim().toLowerCase().email(),
   name:            z.string().min(1).max(100),
   password:        z.string().min(8).optional(), // omitted = Google-only account
-  department:      z.string().min(1).max(50),
+  department:      z.string().transform((v) => v.trim().replace(/\s+/g, ' ')).pipe(z.string().min(1).max(50)),
+  role:            z.enum(['ADMIN', 'DEPARTMENT']).default('DEPARTMENT'),
   canAccessEmails: z.boolean().default(true),
 })
 
 export const updateUserSchema = z.object({
   name:            z.string().min(1).max(100).optional(),
   email:           z.string().trim().toLowerCase().email().optional(),
-  department:      z.string().min(1).max(50).optional(),
+  department:      z.string().transform((v) => v.trim().replace(/\s+/g, ' ')).pipe(z.string().min(1).max(50)).optional(),
   role:            z.enum(['ADMIN', 'DEPARTMENT']).optional(),
   isActive:        z.boolean().optional(),
   canAccessEmails: z.boolean().optional(),

@@ -8,7 +8,7 @@ import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
 import { toast } from 'sonner'
 import { FileText, Mail, Download, Clock } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, emailHandle } from '@/lib/utils'
 import { BRAND_LABELS } from '@/lib/types/template'
 import type { BrandSlug } from '@/lib/types/template'
 
@@ -17,6 +17,7 @@ interface SavedTemplate {
   name: string
   updatedAt: string
   masterTemplate: { name: string; brand: BrandSlug }
+  user: { name: string; email: string } | null
 }
 
 function BrandBadge({ brand }: { brand: BrandSlug }) {
@@ -112,9 +113,14 @@ export default function ViewUserClient({ userId }: { userId: string }) {
               <span className="text-[11px] text-muted-foreground truncate">{t.masterTemplate.name}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Clock className="w-3 h-3" />
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
+            <Clock className="w-3 h-3 shrink-0" />
             {formatDate(t.updatedAt)}
+            {t.user && (
+              <span className="truncate" title={`Created by ${t.user.email}`}>
+                · created by {emailHandle(t.user.email)}
+              </span>
+            )}
           </div>
           <div className="flex gap-1 mt-auto pt-2 border-t">
             <button

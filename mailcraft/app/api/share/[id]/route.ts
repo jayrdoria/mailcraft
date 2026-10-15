@@ -1,4 +1,5 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { requireScope, isOwnedBy } from '@/lib/services/accessService'
 import { prisma } from '@/lib/prisma'
 
 interface RouteContext {
@@ -7,20 +8,18 @@ interface RouteContext {
 
 // DELETE /api/share/:id — remove a share (owner or admin)
 export const DELETE = apiHandler(async (_req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { id } = await (ctx as RouteContext).params
 
   const share = await prisma.sharedTemplate.findUnique({
     where: { id },
-    include: { savedTemplate: { select: { userId: true } } },
+    include: { savedTemplate: { select: { userId: true, department: true } } },
   })
   if (!share) return apiError('Share not found', 404)
 
-  const isOwner = share.savedTemplate.userId === session.user.id
-  const isAdmin = session.user.role === 'ADMIN'
-  if (!isOwner && !isAdmin) return apiError('Forbidden', 403)
+  if (!scope.isAdmin && !isOwnedBy(scope, share.savedTemplate)) return apiError('Forbidden', 403)
 
   await prisma.sharedTemplate.delete({ where: { id } })
 

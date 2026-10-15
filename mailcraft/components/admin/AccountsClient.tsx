@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { distinctDepartments } from '@/lib/department'
 
 interface User {
   id: string
@@ -28,6 +29,17 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+/** Native suggestions for the department inputs — picking an existing one avoids splitting a team */
+function DepartmentOptions({ departments }: { departments: string[] }) {
+  return (
+    <datalist id="department-options">
+      {departments.map((d) => (
+        <option key={d} value={d} />
+      ))}
+    </datalist>
+  )
+}
+
 interface AuthSettings {
   passwordEnabled: boolean
   googleEnabled: boolean
@@ -38,10 +50,12 @@ function CreateAccountSheet({
   onClose,
   onCreated,
   auth,
+  departments,
 }: {
   onClose: () => void
   onCreated: () => void
   auth: AuthSettings
+  departments: string[]
 }) {
   // Password is only required when there is no Google sign-in to fall back on
   const passwordRequired = !auth.googleEnabled
@@ -142,9 +156,12 @@ function CreateAccountSheet({
             <input
               value={form.department}
               onChange={(e) => setForm({ ...form, department: e.target.value })}
+              list="department-options"
               className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="CRM"
             />
+            <DepartmentOptions departments={departments} />
+            <p className="text-[11px] text-muted-foreground mt-1">Accounts in the same department share all templates and folders.</p>
           </div>
           <div>
             <label className="text-xs font-medium block mb-1">Role</label>
@@ -188,11 +205,13 @@ function EditAccountSheet({
   onClose,
   onSaved,
   passwordEnabled,
+  departments,
 }: {
   user: User
   onClose: () => void
   onSaved: () => void
   passwordEnabled: boolean
+  departments: string[]
 }) {
   const [form, setForm] = useState({
     name: user.name,
@@ -277,8 +296,11 @@ function EditAccountSheet({
             <input
               value={form.department}
               onChange={(e) => setForm({ ...form, department: e.target.value })}
+              list="department-options"
               className="w-full px-3 py-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
+            <DepartmentOptions departments={departments} />
+            <p className="text-[11px] text-muted-foreground mt-1">Changing the department moves this account only — its templates stay with the old department.</p>
           </div>
           <div>
             <label className="text-xs font-medium block mb-1">Role</label>
@@ -361,6 +383,7 @@ export default function AccountsClient(auth: AuthSettings) {
       return json.data
     },
   })
+  const departments = distinctDepartments(users.map((u) => u.department))
 
   const deactivateMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -519,6 +542,7 @@ export default function AccountsClient(auth: AuthSettings) {
           onClose={() => setShowCreate(false)}
           onCreated={() => qc.invalidateQueries({ queryKey: ['users'] })}
           auth={auth}
+          departments={departments}
         />
       )}
 
@@ -528,6 +552,7 @@ export default function AccountsClient(auth: AuthSettings) {
           onClose={() => setEditingUser(null)}
           onSaved={() => qc.invalidateQueries({ queryKey: ['users'] })}
           passwordEnabled={auth.passwordEnabled}
+          departments={departments}
         />
       )}
     </div>

@@ -1,6 +1,7 @@
 import { apiError, apiSuccess, apiHandler, requireAdmin } from '@/lib/api'
 import { renderTemplate, buildSectionTransformer } from '@/lib/services/renderService'
 import { prisma } from '@/lib/prisma'
+import { getScopeForUser, ownedWhere } from '@/lib/services/accessService'
 import type {
   Language,
   MultiLanguageFieldValues,
@@ -27,8 +28,11 @@ export const GET = apiHandler(async (req, ctx) => {
   const rawLang = url.searchParams.get('lang') ?? 'en'
   const lang = VALID_LANGS.includes(rawLang as Language) ? (rawLang as Language) : 'en'
 
+  const scope = await getScopeForUser(userId)
+  if (!scope) return apiError('User not found', 404)
+
   const saved = await prisma.savedTemplate.findFirst({
-    where: { id: templateId, userId },
+    where: { id: templateId, ...ownedWhere(scope) },
     include: { masterTemplate: true },
   })
   if (!saved) return apiError('Template not found', 404)

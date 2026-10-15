@@ -15,7 +15,7 @@ import {
   Folder, FolderPlus, FolderInput, ChevronRight, Pencil, X,
   CheckSquare, Square,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, emailHandle } from '@/lib/utils'
 import { BRAND_LABELS } from '@/lib/types/template'
 import type { BrandSlug } from '@/lib/types/template'
 import ShareModal from '@/components/editor/ShareModal'
@@ -42,6 +42,7 @@ interface SavedTemplate {
   folderId: string | null
   previewImageUrl: string | null
   masterTemplate: { id: string; name: string; brand: BrandSlug; languages: string[] }
+  lastEditedBy?: { id: string; name: string; email: string } | null
 }
 
 interface FolderItem {
@@ -55,7 +56,7 @@ interface FolderItem {
 interface SharedTemplate {
   id: string
   savedTemplate: SavedTemplate & {
-    user: { id: string; name: string; department: string | null }
+    user: { id: string; name: string; department: string | null } | null
     previewImageUrl: string | null
   }
   sharedBy: { id: string; name: string; department: string | null }
@@ -1149,9 +1150,14 @@ export default function DashboardClient({ userName, initialFolderId = null }: Da
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Clock className="w-3 h-3" />
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
+                      <Clock className="w-3 h-3 shrink-0" />
                       {formatDate(t.updatedAt)}
+                      {t.lastEditedBy && (
+                        <span className="truncate" title={`Last edited by ${t.lastEditedBy.email}`}>
+                          · by {emailHandle(t.lastEditedBy.email)}
+                        </span>
+                      )}
                     </div>
 
                     <div className="pt-2 border-t">

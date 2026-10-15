@@ -1,4 +1,7 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
+import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { requireScope, ownedWhere, readableTemplateWhere, scopeUserName } from '@/lib/services/accessService'
 import { updateSavedTemplateSchema } from '@/lib/schemas'
 import { renderAndSaveAllLanguages, buildSectionTransformer } from '@/lib/services/renderService'
 import { deleteTemplateDir } from '@/lib/services/fileService'
@@ -17,46 +20,30 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-async function getSavedForUser(id: string, userId: string, isAdmin: boolean) {
-  if (isAdmin) {
-    return prisma.savedTemplate.findFirst({
-      where: { id },
-      include: { masterTemplate: true },
-    })
-  }
-  return prisma.savedTemplate.findFirst({
-    where: {
-      id,
-      OR: [
-        { userId },
-        { sharedWith: { some: { sharedWithId: userId } } },
-      ],
-    },
-    include: { masterTemplate: true },
-  })
-}
-
-// GET /api/templates/saved/:id — get saved template (owner, shared-with, or admin)
+// GET /api/templates/saved/:id — get saved template (owning department/user, shared-with, or admin)
 export const GET = apiHandler(async (_req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { id } = await (ctx as RouteContext).params
-  const saved = await getSavedForUser(id, session.user.id, session.user.role === 'ADMIN')
+  const saved = await prisma.savedTemplate.findFirst({
+    where: { id, ...readableTemplateWhere(scope) },
+    include: { masterTemplate: true },
+  })
   if (!saved) return apiError('Template not found', 404)
 
   return apiSuccess(saved)
 })
 
-// PATCH /api/templates/saved/:id — update name / fieldValues / sectionConfig (owner only)
+// PATCH /api/templates/saved/:id — update name / fieldValues / sectionConfig (owning department/user only)
 export const PATCH = apiHandler(async (req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { id } = await (ctx as RouteContext).params
 
   const existing = await prisma.savedTemplate.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, ...ownedWhere(scope) },
     include: { masterTemplate: true },
   })
   if (!existing) return apiError('Template not found', 404)
@@ -65,38 +52,71 @@ export const PATCH = apiHandler(async (req, ctx) => {
   const parsed = updateSavedTemplateSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
-  const { name, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId } = parsed.data
+  const { name, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId, expectedUpdatedAt } = parsed.data
 
   // Reject duplicate names (only when name is actually changing)
   if (name !== undefined && name !== existing.name) {
     const nameConflict = await prisma.savedTemplate.findFirst({
-      where: { userId: session.user.id, name, NOT: { id } },
+      where: { ...ownedWhere(scope), name, NOT: { id } },
       select: { id: true },
     })
     if (nameConflict) return apiError('A template with that name already exists', 409)
   }
 
-  // Verify folderId belongs to this user (when provided and non-null)
+  // Verify folderId belongs to the same scope (when provided and non-null)
   if (folderId) {
     const folder = await prisma.folder.findFirst({
-      where: { id: folderId, userId: session.user.id },
+      where: { id: folderId, ...ownedWhere(scope) },
       select: { id: true },
     })
     if (!folder) return apiError('Folder not found', 404)
   }
 
-  const updated = await prisma.savedTemplate.update({
-    where: { id },
-    data: {
-      ...(name !== undefined ? { name } : {}),
-      ...(fieldValues !== undefined ? { fieldValues: fieldValues as object } : {}),
-      ...(sectionConfig !== undefined ? { sectionConfig: sectionConfig as object } : {}),
-      ...(customBlocks !== undefined ? { customBlocks: customBlocks as object } : {}),
-      ...(layoutOrder !== undefined ? { layoutOrder: layoutOrder as object } : {}),
-      ...(folderId !== undefined ? { folderId } : {}),
-    },
-    include: { masterTemplate: true },
-  })
+  // Folder-only moves are reorganisation, not edits — they don't change "last edited by"
+  const isContentChange =
+    name !== undefined ||
+    fieldValues !== undefined ||
+    sectionConfig !== undefined ||
+    customBlocks !== undefined ||
+    layoutOrder !== undefined
+
+  const data: Prisma.SavedTemplateUncheckedUpdateManyInput = {
+    ...(name !== undefined ? { name } : {}),
+    ...(fieldValues !== undefined ? { fieldValues: fieldValues as object } : {}),
+    ...(sectionConfig !== undefined ? { sectionConfig: sectionConfig as object } : {}),
+    ...(customBlocks !== undefined ? { customBlocks: customBlocks as object } : {}),
+    ...(layoutOrder !== undefined ? { layoutOrder: layoutOrder as object } : {}),
+    ...(folderId !== undefined ? { folderId } : {}),
+    ...(isContentChange ? { lastEditedById: scope.userId } : {}),
+  }
+
+  // Optimistic concurrency: the editor sends the updatedAt it loaded. If anyone saved
+  // since, refuse (atomically) instead of silently overwriting their changes.
+  if (expectedUpdatedAt) {
+    const { count } = await prisma.savedTemplate.updateMany({
+      where: { id, updatedAt: new Date(expectedUpdatedAt) },
+      data,
+    })
+    if (count === 0) {
+      const current = await prisma.savedTemplate.findUnique({
+        where: { id },
+        select: { updatedAt: true, lastEditedBy: { select: { email: true } } },
+      })
+      return NextResponse.json(
+        {
+          error: 'This template was changed by someone else since you opened it. Reload to get the latest version.',
+          code: 'STALE_WRITE',
+          updatedAt: current?.updatedAt ?? null,
+          updatedBy: current?.lastEditedBy?.email ?? null,
+        },
+        { status: 409 }
+      )
+    }
+  }
+
+  const updated = expectedUpdatedAt
+    ? await prisma.savedTemplate.findUniqueOrThrow({ where: { id }, include: { masterTemplate: true } })
+    : await prisma.savedTemplate.update({ where: { id }, data, include: { masterTemplate: true } })
 
   // Re-render all languages to disk (best-effort)
   if (updated.renderedBasePath && (fieldValues !== undefined || sectionConfig !== undefined)) {
@@ -131,17 +151,11 @@ export const PATCH = apiHandler(async (req, ctx) => {
   }
 
   // Only log content saves — not folder-only reorganisation
-  const isContentChange =
-    name !== undefined ||
-    fieldValues !== undefined ||
-    sectionConfig !== undefined ||
-    customBlocks !== undefined ||
-    layoutOrder !== undefined
   if (isContentChange) {
     await activityService.log({
       action: 'TEMPLATE_SAVED',
-      userId: session.user.id,
-      userName: session.user.name ?? session.user.email ?? 'Unknown',
+      userId: scope.userId,
+      userName: scopeUserName(scope),
       savedTemplateId: updated.id,
       savedTemplateName: updated.name,
       masterTemplateName: existing.masterTemplate.name,
@@ -151,15 +165,14 @@ export const PATCH = apiHandler(async (req, ctx) => {
   return apiSuccess(updated)
 })
 
-// DELETE /api/templates/saved/:id — delete template + rendered files (owner or admin)
+// DELETE /api/templates/saved/:id — delete template + rendered files (owning department/user or admin)
 export const DELETE = apiHandler(async (_req, ctx) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const { id } = await (ctx as RouteContext).params
 
-  const where =
-    session.user.role === 'ADMIN' ? { id } : { id, userId: session.user.id }
+  const where = scope.isAdmin ? { id } : { id, ...ownedWhere(scope) }
 
   const existing = await prisma.savedTemplate.findFirst({
     where,
@@ -180,9 +193,9 @@ export const DELETE = apiHandler(async (_req, ctx) => {
   }
 
   // For imported templates: also delete the hidden MasterTemplate + its HTML files.
-  // Only runs when the master is imported and owned by this user — never affects regular templates.
+  // Only runs when the master was imported by this user or a member of their department — never affects regular templates.
   const masterRaw = existing.masterTemplate as unknown as { isImported?: boolean; importedBy?: string }
-  if (masterRaw.isImported === true && masterRaw.importedBy === session.user.id) {
+  if (masterRaw.isImported === true && masterRaw.importedBy && scope.memberIds.includes(masterRaw.importedBy)) {
     const otherSaved = await prisma.savedTemplate.count({
       where: { masterTemplateId: existing.masterTemplateId },
     })
@@ -198,8 +211,8 @@ export const DELETE = apiHandler(async (_req, ctx) => {
 
   await activityService.log({
     action: 'TEMPLATE_DELETED',
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? 'Unknown',
+    userId: scope.userId,
+    userName: scopeUserName(scope),
     savedTemplateId: id,
     savedTemplateName: existing.name,
     masterTemplateName: existing.masterTemplate.name,

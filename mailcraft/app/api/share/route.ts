@@ -1,11 +1,12 @@
-import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { requireScope, ownedWhere } from '@/lib/services/accessService'
 import { createShareSchema } from '@/lib/schemas'
 import { prisma } from '@/lib/prisma'
 
 // POST /api/share — share a saved template with one or more accounts
 export const POST = apiHandler(async (req) => {
-  const session = await requireAuth()
-  if (!session) return apiError('Unauthorized', 401)
+  const scope = await requireScope()
+  if (!scope) return apiError('Unauthorized', 401)
 
   const body = await req.json()
   const parsed = createShareSchema.safeParse(body)
@@ -13,9 +14,9 @@ export const POST = apiHandler(async (req) => {
 
   const { savedTemplateId, sharedWithIds } = parsed.data
 
-  // Verify ownership
+  // Verify ownership (department or personal)
   const saved = await prisma.savedTemplate.findFirst({
-    where: { id: savedTemplateId, userId: session.user.id },
+    where: { id: savedTemplateId, ...ownedWhere(scope) },
   })
   if (!saved) return apiError('Template not found', 404)
 
@@ -32,7 +33,7 @@ export const POST = apiHandler(async (req) => {
   await prisma.sharedTemplate.createMany({
     data: sharedWithIds.map((sharedWithId) => ({
       savedTemplateId,
-      sharedById: session.user.id,
+      sharedById: scope.userId,
       sharedWithId,
     })),
     skipDuplicates: true,
