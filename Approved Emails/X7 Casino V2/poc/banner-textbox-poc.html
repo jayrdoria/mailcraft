@@ -95,6 +95,8 @@
       .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
       .toolbar .seg { background: #fff; }
       .toolbar .seg label { padding: 6px 12px; }
+      .seg-icons label { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; font-size: 11px; line-height: 1.2; }
+      .seg-icons svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
       .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
       .chip { padding: 4px 10px; font-size: 12px; border-radius: 999px; }
       .thumb { display: block; margin-top: 8px; height: 48px; width: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 6px; object-fit: contain; background: #e4e4e7; }
@@ -160,18 +162,37 @@
             <label for="box-off">Off</label>
             <input type="radio" name="box" id="box-left" value="left" checked />
             <label for="box-left">Left</label>
+            <input type="radio" name="box" id="box-center" value="center" />
+            <label for="box-center">Centre</label>
             <input type="radio" name="box" id="box-right" value="right" />
             <label for="box-right">Right</label>
           </div>
+          <p class="note">Where the 50% box sits on the banner. Centre = the true middle of the banner.</p>
         </fieldset>
 
         <fieldset>
           <legend>Text alignment</legend>
-          <div class="seg">
+          <div class="seg seg-icons">
             <input type="radio" name="align" id="align-left" value="left" checked />
-            <label for="align-left">Left</label>
+            <label for="align-left" title="Left, vertically centred">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="2" /><path d="M6 9h12M6 12h8M6 15h10" /></svg>
+              Left
+            </label>
+            <input type="radio" name="align" id="align-center" value="center" />
+            <label for="align-center" title="Centre, vertically centred">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="2" /><path d="M6 9h12M8 12h8M7 15h10" /></svg>
+              Centre
+            </label>
             <input type="radio" name="align" id="align-right" value="right" />
-            <label for="align-right">Right</label>
+            <label for="align-right" title="Right, vertically centred">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="2" /><path d="M6 9h12M10 12h8M8 15h10" /></svg>
+              Right
+            </label>
+            <input type="radio" name="align" id="align-bottom" value="bottom" />
+            <label for="align-bottom" title="Centre, at the bottom">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="2" /><path d="M6 12h12M8 15h8M7 18h10" /></svg>
+              Bottom centre
+            </label>
           </div>
         </fieldset>
 
@@ -234,8 +255,12 @@
           <p class="note">Must be 1125×506 (same ratio) or the text box height won't match.</p>
         </div>
         <div class="field">
-          <label class="lbl" for="spacerUrl">Spacer URL</label>
+          <label class="lbl" for="spacerUrl">Spacer URL (left / right box)</label>
           <input type="url" id="spacerUrl" value="spacer-half-banner.png" />
+        </div>
+        <div class="field">
+          <label class="lbl" for="spacerQuarterUrl">Spacer URL (centre box)</label>
+          <input type="url" id="spacerQuarterUrl" value="spacer-quarter-banner.png" />
         </div>
         <div class="field">
           <label class="lbl" for="linkUrl">Banner link</label>
@@ -358,27 +383,38 @@
           )
         }
 
-        // ── Banner row: text box (left/right, 50%, vertically centred) ──
+        // ── Banner row: text box, always 50% wide ──
+        // Box position:  left | center | right
+        //   left/right → [50% text][50% half-spacer]   (or mirrored)
+        //   center     → [25% quarter-spacer][50% text][25% quarter-spacer]
+        // Text alignment: left | right | center → vertically middle
+        //                 bottom               → centred, at the bottom of the box
+        // Row height always comes from the spacer images (no @media needed).
         function buildBannerRow(o) {
           if (o.box === 'off') return buildPlainBanner(o)
 
           var link = escAttr(o.link)
           var banner = escAttr(o.banner)
-          var spacer = escAttr(o.spacer)
-          var align = o.align === 'right' ? 'right' : 'left'
+          var align = o.align === 'left' || o.align === 'right' ? o.align : 'center'
+          var valign = o.align === 'bottom' ? 'bottom' : 'middle'
           // Mobile-first base (inline, always applies): 16px on the banner's outer
           // edge, 6px towards the centre. Desktop enlarges via optional @media.
-          var pad = o.box === 'left' ? '0 6px 0 16px' : '0 16px 0 6px'
-          var padClass = o.box === 'left' ? 'bt-pad-l' : 'bt-pad-r'
+          var pad = o.box === 'left' ? '0 6px 0 16px' : o.box === 'right' ? '0 16px 0 6px' : '0 6px'
+          var padClass = o.box === 'left' ? 'bt-pad-l' : o.box === 'right' ? 'bt-pad-r' : 'bt-pad-c'
           var subHtml = esc(o.sub).replace(/\r?\n/g, '<br />')
           var t = o.brand.title
           var sb = o.brand.sub
+          // Bottom alignment: fixed gap under the text (a spacer row, so the
+          // optional @media padding overrides can't wipe it out)
+          var bottomGap = valign === 'bottom'
+            ? '            <tr><td height="14" style="height: 14px; padding: 0; font-size: 0; line-height: 0">&nbsp;</td></tr>\n'
+            : ''
 
           var textCell =
-            '        <td width="50%" valign="middle" style="width: 50%; padding: 0">\n' +
+            '        <td width="50%" valign="' + valign + '" style="width: 50%; padding: 0">\n' +
             '          <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; table-layout: fixed">\n' +
             '            <tr>\n' +
-            '              <td align="' + align + '" valign="middle" class="' + padClass + '" style="padding: ' + pad + '; text-align: ' + align + '; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word">\n' +
+            '              <td align="' + align + '" valign="' + valign + '" class="' + padClass + '" style="padding: ' + pad + '; text-align: ' + align + '; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word">\n' +
             '                <a href="' + link + '" style="display: block; color: ' + o.titleColor + '; text-decoration: none">\n' +
             (o.title.trim()
               ? '                  <span class="bt-title" style="display: block; font-family: ' + t.font + '; font-size: ' + t.size + 'px; font-weight: ' + t.weight + '; line-height: ' + t.lh + '; letter-spacing: ' + t.spacing + ';' + (t.upper ? ' text-transform: uppercase;' : '') + ' color: ' + o.titleColor + '">' + esc(o.title) + '</span>\n'
@@ -389,13 +425,23 @@
             '                </a>\n' +
             '              </td>\n' +
             '            </tr>\n' +
+            bottomGap +
             '          </table>\n' +
             '        </td>\n'
 
-          var spacerCell =
-            '        <td width="50%" valign="middle" style="width: 50%; padding: 0; font-size: 0; line-height: 0">\n' +
-            '          <a href="' + link + '"><img src="' + spacer + '" alt="" width="' + BANNER_W / 2 + '" height="' + BANNER_H + '" style="display: block; width: 100%; height: auto; border: 0" /></a>\n' +
-            '        </td>\n'
+          // pct = column width; the spacer's aspect ratio matches that column's
+          // share of the banner, so width:100% gives exactly the banner height.
+          function spacerCell(src, pct) {
+            return (
+              '        <td width="' + pct + '%" valign="middle" style="width: ' + pct + '%; padding: 0; font-size: 0; line-height: 0">\n' +
+              '          <a href="' + link + '"><img src="' + escAttr(src) + '" alt="" width="' + Math.round(BANNER_W * pct / 100) + '" height="' + BANNER_H + '" style="display: block; width: 100%; height: auto; border: 0" /></a>\n' +
+              '        </td>\n'
+            )
+          }
+          var cells =
+            o.box === 'left' ? textCell + spacerCell(o.spacer, 50)
+            : o.box === 'right' ? spacerCell(o.spacer, 50) + textCell
+            : spacerCell(o.spacerQuarter, 25) + textCell + spacerCell(o.spacerQuarter, 25)
 
           return (
             '<tr>\n' +
@@ -407,7 +453,7 @@
             '    <![endif]-->\n' +
             '    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; table-layout: fixed">\n' +
             '      <tr>\n' +
-            (o.box === 'left' ? textCell + spacerCell : spacerCell + textCell) +
+            cells +
             '      </tr>\n' +
             '    </table>\n' +
             '    <!--[if gte mso 9]>\n' +
@@ -443,6 +489,7 @@
                 '    .bt-sub-only { font-size: ' + o.brand.sub.desktop + 'px !important; }\n' +
                 '    .bt-pad-l { padding: 0 8px 0 28px !important; }\n' +
                 '    .bt-pad-r { padding: 0 28px 0 8px !important; }\n' +
+                '    .bt-pad-c { padding: 0 8px !important; }\n' +
                 '  }\n'
               : '') +
             '</style>\n' +
@@ -567,7 +614,8 @@
             title: $('title').value,
             sub: $('sub').value,
             banner: $('bannerUrl').value.trim() || 'banner-black-1125x506.png',
-            spacer: $('spacerUrl').value || 'spacer-half-banner.png',
+            spacer: $('spacerUrl').value.trim() || 'spacer-half-banner.png',
+            spacerQuarter: $('spacerQuarterUrl').value.trim() || 'spacer-quarter-banner.png',
             link: $('linkUrl').value || '#',
             desktopMq: !$('noMq').checked,
             titleColor: hex('titleColor'),
@@ -628,8 +676,7 @@
 
           // Alignment is meaningless while the box is off
           var off = o.box === 'off'
-          $('align-left').disabled = off
-          $('align-right').disabled = off
+          document.querySelectorAll('input[name="align"]').forEach(function (el) { el.disabled = off })
           $('title').disabled = off
           $('sub').disabled = off
           document.querySelectorAll('.stepper input, .stepper button, .colors input, .swatch').forEach(function (el) { el.disabled = off })
@@ -642,7 +689,8 @@
           setStatus.t = setTimeout(function () { $('status').textContent = '' }, 3000)
         }
         function warnLocal(o) {
-          return /^https?:\/\//i.test(o.banner) && /^https?:\/\//i.test(o.spacer)
+          var spacer = o.box === 'center' ? o.spacerQuarter : o.spacer
+          return o.box === 'off' || (/^https?:\/\//i.test(o.banner) && /^https?:\/\//i.test(spacer))
             ? ''
             : ' (banner/spacer are local files — host them before a CIO send)'
         }

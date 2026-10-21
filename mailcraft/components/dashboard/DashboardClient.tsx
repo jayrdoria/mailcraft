@@ -588,6 +588,7 @@ export default function DashboardClient({ userName, initialFolderId = null }: Da
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['saved-templates'] })
+      qc.invalidateQueries({ queryKey: ['folders'] }) // copy may land in a folder → refresh its count
       toast.success('Template duplicated')
     },
     onError: () => toast.error('Duplicate failed — please try again'),
@@ -715,6 +716,22 @@ export default function DashboardClient({ userName, initialFolderId = null }: Da
   const own = data?.own ?? []
   const shared = data?.shared ?? []
   const activeFolder = activeFolderId ? folders.find((f) => f.id === activeFolderId) : null
+
+  // Folder grid order: most recent save first — latest updatedAt of any template inside,
+  // or the folder's own createdAt when it's empty / newer than its templates
+  const folderActivity = new Map<string, number>()
+  for (const f of folders) folderActivity.set(f.id, new Date(f.createdAt).getTime())
+  for (const t of own) {
+    if (!t.folderId) continue
+    const prev = folderActivity.get(t.folderId)
+    const ts = new Date(t.updatedAt).getTime()
+    if (prev !== undefined && ts > prev) folderActivity.set(t.folderId, ts)
+  }
+  const sortedFolders = [...folders].sort(
+    (a, b) =>
+      (folderActivity.get(b.id) ?? 0) - (folderActivity.get(a.id) ?? 0) ||
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
 
   // Templates visible in the current "location"
   const locationFiltered = activeFolderId
@@ -968,7 +985,7 @@ export default function DashboardClient({ userName, initialFolderId = null }: Da
           <div className="mb-6">
             {(folders.length > 0 || creatingFolder) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-2">
-                {folders.map((f) => (
+                {sortedFolders.map((f) => (
                   <FolderCard
                     key={f.id}
                     folder={f}

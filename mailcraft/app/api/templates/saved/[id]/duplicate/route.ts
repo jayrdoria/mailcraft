@@ -43,6 +43,11 @@ export const POST = apiHandler(async (_req, ctx) => {
       name: candidateName,
       fieldValues: source.fieldValues ?? {},
       sectionConfig: source.sectionConfig ?? [],
+      // Keep MailCraft Blocks + their order; null (legacy) stays null via the column default
+      ...(source.customBlocks !== null ? { customBlocks: source.customBlocks } : {}),
+      ...(source.layoutOrder !== null ? { layoutOrder: source.layoutOrder } : {}),
+      // Copy lands in the same folder as the source (folder is in the same scope as the source)
+      ...(source.folderId ? { folderId: source.folderId } : {}),
     },
   })
 

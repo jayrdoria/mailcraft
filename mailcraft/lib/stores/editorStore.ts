@@ -228,6 +228,8 @@ interface EditorStore {
   setTemplateName: (name: string) => void
   setFieldValue: (key: string, value: FieldValue) => void
   setFieldValueAllLanguages: (key: string, value: FieldValue) => void
+  /** Different value per supported language (e.g. a translated CTA preset) */
+  setFieldValuePerLanguage: (key: string, valueFor: (lang: Language) => FieldValue) => void
   applySetupConfig: (config: SetupConfig) => void
   setDevice: (device: EditorStore['device']) => void
   setBodyAlignment: (alignment: BodyAlignment) => void
@@ -482,6 +484,15 @@ export const useEditorStore = create<EditorStore>((set) => ({
       const updated = { ...state.fieldValues }
       for (const lang of state.supportedLanguages) {
         updated[lang] = { ...updated[lang], [key]: value }
+      }
+      return { isDirty: true, fieldValues: updated }
+    }),
+
+  setFieldValuePerLanguage: (key, valueFor) =>
+    set((state) => {
+      const updated = { ...state.fieldValues }
+      for (const lang of state.supportedLanguages) {
+        updated[lang] = { ...updated[lang], [key]: valueFor(lang) }
       }
       return { isDirty: true, fieldValues: updated }
     }),

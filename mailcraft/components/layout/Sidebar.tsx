@@ -12,6 +12,7 @@ import {
   BookOpen,
   Activity,
   LogOut,
+  MousePointerClick,
   Menu,
   X,
 } from 'lucide-react'
@@ -22,6 +23,8 @@ interface SidebarProps {
   role: 'ADMIN' | 'DEPARTMENT'
   name: string
   email: string
+  /** Shows the CTA Presets link (admins, or accounts given the permission) */
+  canManageCtaPresets?: boolean
 }
 
 interface NavItem {
@@ -39,6 +42,8 @@ const mainNav: NavItem[] = [
   { label: 'My Activity', href: '/activity', icon: Activity },
 ]
 
+const ctaPresetsNav: NavItem = { label: 'CTA Presets', href: '/cta-presets', icon: MousePointerClick }
+
 const comingSoonNav: NavItem[] = [
   {
     label: 'In-App Popups',
@@ -55,7 +60,7 @@ const adminNav: NavItem[] = [
   { label: 'Activity', href: '/admin/activity', icon: Activity },
 ]
 
-export default function Sidebar({ role, name, email }: SidebarProps) {
+export default function Sidebar({ role, name, email, canManageCtaPresets = false }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -132,6 +137,9 @@ export default function Sidebar({ role, name, email }: SidebarProps) {
               onClick={closeOnMobile}
             />
           ))}
+          {canManageCtaPresets && (
+            <NavLink item={ctaPresetsNav} active={isActive(ctaPresetsNav.href)} onClick={closeOnMobile} />
+          )}
 
           <div className="my-2 border-t" />
 

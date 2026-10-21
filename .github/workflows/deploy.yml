@@ -65,8 +65,22 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           envs: GHCR_TOKEN
           script: |
+            # Any failure (backup, pull, migration) stops the deploy — the running app is left untouched
+            set -e
+
             echo "$GHCR_TOKEN" | docker login ghcr.io -u jayrdoria --password-stdin
             cd /home/admin/web/employee.netovation.eu/public_html/mailcraft/mailcraft
+
+            # DB backup before every deploy — written to .tmp first so a failed dump never looks like a good one.
+            # Keeps the newest 2. Restore: pg_restore into the postgres container (needs SSH).
+            BACKUP_DIR=/home/admin/mailcraft-backups
+            BACKUP_FILE="$BACKUP_DIR/pre-deploy-$(date +%Y%m%d-%H%M%S).dump"
+            mkdir -p "$BACKUP_DIR"
+            docker compose -f docker-compose.prod.yml exec -T postgres \
+              sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$BACKUP_FILE.tmp"
+            mv "$BACKUP_FILE.tmp" "$BACKUP_FILE"
+            ls -1t "$BACKUP_DIR"/pre-deploy-*.dump | tail -n +3 | xargs -r rm --
+            echo "DB backup saved: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
 
             git pull
 

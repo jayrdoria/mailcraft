@@ -10,6 +10,10 @@ import RichTextEditor from '@/components/editor/RichTextEditor'
 import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue, BodyParagraph } from '@/lib/types/template'
 import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { LANGUAGE_LABELS, LANGUAGES } from '@/lib/types/template'
+import { useQuery } from '@tanstack/react-query'
+import { apiFetch } from '@/lib/apiFetch'
+import { CTA_PRESET_FIELD_KEY, ctaPresetText } from '@/lib/types/ctaPreset'
+import type { CtaPreset } from '@/lib/types/ctaPreset'
 
 function normalizeGroup(group: string): string {
   return group.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
@@ -81,6 +85,35 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   const customBlocks = useEditorStore((s) => s.customBlocks)
   const layoutOrder = useEditorStore((s) => s.layoutOrder)
   const setActiveFieldKey = useEditorStore((s) => s.setActiveFieldKey)
+
+  const setFieldValuePerLanguage = useEditorStore((s) => s.setFieldValuePerLanguage)
+
+  // CTA preset dropdown options — only fetched when this template has the CTA text field
+  const hasCtaPresetField = editableFields.some((f) => f.key === CTA_PRESET_FIELD_KEY && f.type === 'text')
+  const { data: ctaPresets = [] } = useQuery<CtaPreset[]>({
+    queryKey: ['cta-presets'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/cta-presets')
+      if (!res.ok) throw new Error('Failed to load CTA presets')
+      const json = await res.json()
+      return json.data
+    },
+    enabled: hasCtaPresetField,
+    staleTime: 60_000,
+  })
+
+  // Overwrites the CTA in every language with that language's translation (FRCA → FR)
+  function applyCtaPreset(presetId: string) {
+    const preset = ctaPresets.find((p) => p.id === presetId)
+    if (!preset) return
+    setFieldValuePerLanguage(CTA_PRESET_FIELD_KEY, (lang) => ctaPresetText(preset, lang))
+  }
+
+  // Preset currently in use = every supported language matches its translation
+  const activeCtaPresetId =
+    ctaPresets.find((p) =>
+      supportedLanguages.every((lang) => fieldValues[lang]?.[CTA_PRESET_FIELD_KEY] === ctaPresetText(p, lang))
+    )?.id ?? ''
 
   // Session-only: tracks which url fields are synced across all languages
   const [syncedFields, setSyncedFields] = useState<Set<string>>(new Set())
@@ -263,6 +296,31 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
                           </button>
                         )}
                       </div>
+
+                      {field.key === CTA_PRESET_FIELD_KEY && field.type === 'text' && ctaPresets.length > 0 && (
+                        <div className="mb-1.5">
+                          <p className="text-[11px] text-muted-foreground mb-1">Quick pick — fills all languages</p>
+                          <select
+                            value={activeCtaPresetId}
+                            onChange={(e) => applyCtaPreset(e.target.value)}
+                            className="w-full px-3 py-2 text-sm rounded-md border bg-background cursor-pointer
+                                       focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            <option value="" disabled>
+                              {activeCtaPresetId ? '' : 'Choose a CTA…'}
+                            </option>
+                            {ctaPresets.map((p) => {
+                              // Shown in the active tab's language so it matches the text box; EN in brackets as the meaning
+                              const text = ctaPresetText(p, activeLanguage)
+                              return (
+                                <option key={p.id} value={p.id}>
+                                  {text === p.en ? text : `${text}  (${p.en})`}
+                                </option>
+                              )
+                            })}
+                          </select>
+                        </div>
+                      )}
 
                       {field.type === 'richtext' ? (
                         <RichTextEditor

@@ -27,6 +27,7 @@ export async function getAllUsers() {
       department: true,
       isActive: true,
       canAccessEmails: true,
+      canManageCtaPresets: true,
       createdAt: true,
       _count: {
         select: { savedTemplates: true },
@@ -47,6 +48,7 @@ export async function getUserById(id: string) {
       department: true,
       isActive: true,
       canAccessEmails: true,
+      canManageCtaPresets: true,
       createdAt: true,
     },
   })
@@ -87,6 +89,7 @@ export async function updateUser(
     role: 'ADMIN' | 'DEPARTMENT'
     isActive: boolean
     canAccessEmails: boolean
+    canManageCtaPresets: boolean
     department: string
   }>
 ) {

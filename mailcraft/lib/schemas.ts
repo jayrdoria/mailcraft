@@ -218,10 +218,29 @@ export const updateUserSchema = z.object({
   role:            z.enum(['ADMIN', 'DEPARTMENT']).optional(),
   isActive:        z.boolean().optional(),
   canAccessEmails: z.boolean().optional(),
+  canManageCtaPresets: z.boolean().optional(),
   password:        z.string().min(8).optional(),
 })
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword:     z.string().min(8),
+})
+
+// ─────────────────────────────────────────────
+// CTA presets
+// ─────────────────────────────────────────────
+
+const ctaText = z.string().trim().min(1, 'Every language needs a text').max(100)
+
+export const ctaPresetSchema = z.object({
+  en: ctaText,
+  fr: ctaText,
+  de: ctaText,
+  it: ctaText,
+  es: ctaText,
+})
+
+export const reorderCtaPresetsSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(500),
 })

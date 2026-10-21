@@ -22,6 +22,7 @@ interface User {
   department: string | null
   isActive: boolean
   canAccessEmails: boolean
+  canManageCtaPresets: boolean
   createdAt: string
 }
 
@@ -219,6 +220,7 @@ function EditAccountSheet({
     department: user.department ?? '',
     role: user.role,
     isActive: user.isActive,
+    canManageCtaPresets: user.canManageCtaPresets,
   })
   const [newPassword, setNewPassword] = useState('')
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -230,6 +232,7 @@ function EditAccountSheet({
         email: form.email,
         role: form.role,
         isActive: form.isActive,
+        canManageCtaPresets: form.canManageCtaPresets,
       }
       if (form.department) body.department = form.department
       if (newPassword) body.password = newPassword
@@ -331,6 +334,29 @@ function EditAccountSheet({
               />
             </button>
           </div>
+          {form.role === 'DEPARTMENT' && (
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <label className="text-xs font-medium">Can manage CTA presets</label>
+                <p className="text-[11px] text-muted-foreground">Add, edit and delete the editor&apos;s CTA dropdown options. Admins always can.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, canManageCtaPresets: !form.canManageCtaPresets })}
+                className={cn(
+                  'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer',
+                  form.canManageCtaPresets ? 'bg-primary' : 'bg-muted'
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform',
+                    form.canManageCtaPresets ? 'translate-x-4' : 'translate-x-0.5'
+                  )}
+                />
+              </button>
+            </div>
+          )}
 
           {passwordEnabled && (
             <div className="border-t pt-4">
@@ -477,6 +503,11 @@ export default function AccountsClient(auth: AuthSettings) {
                     )}>
                       {u.role}
                     </span>
+                    {u.role === 'DEPARTMENT' && u.canManageCtaPresets && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-500/15 text-blue-400" title="Can manage CTA presets">
+                        CTA
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn(
