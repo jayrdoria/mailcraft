@@ -233,6 +233,8 @@ interface EditorStore {
   applySetupConfig: (config: SetupConfig) => void
   setDevice: (device: EditorStore['device']) => void
   setBodyAlignment: (alignment: BodyAlignment) => void
+  // Banner text box settings — _banner* meta-keys on fieldValues.en (lib/bannerText.ts)
+  setBannerMeta: (meta: Record<string, string>) => void
   setActiveLanguage: (lang: Language) => void
   openSetupModal: () => void
   closeSetupModal: () => void
@@ -509,6 +511,15 @@ export const useEditorStore = create<EditorStore>((set) => ({
       fieldValues: {
         ...state.fieldValues,
         en: { ...state.fieldValues.en, _bodyAlignment: alignment },
+      },
+    })),
+
+  setBannerMeta: (meta) =>
+    set((state) => ({
+      isDirty: true,
+      fieldValues: {
+        ...state.fieldValues,
+        en: { ...state.fieldValues.en, ...meta },
       },
     })),
 

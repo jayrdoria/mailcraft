@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import Redis from 'ioredis'
 import { X7_V2_SLUG, x7v2CreateData, x7v2UpdateData } from './templates/x7v2'
+import { withBannerTextFields } from './templates/bannerText'
 
 const prisma = new PrismaClient()
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379')
@@ -296,7 +297,7 @@ async function main() {
     where: { slug: 'stakes-template' },
     update: {
       baseFilePath: `${templateBaseDir}/master-templates/stakes`,
-      editableFields: stakesJCEditableFields,
+      editableFields: withBannerTextFields(stakesJCEditableFields, ['en', 'fr', 'frca', 'de', 'it', 'es']),
       lockedFields: stakesJCLockedFields,
       languages: ['en', 'fr', 'frca', 'de', 'it', 'es'],
     },
@@ -307,7 +308,7 @@ async function main() {
       description: 'Stakes promotional email template — 6 languages (EN, FR, FRCA, DE, IT, ES)',
       baseFilePath: `${templateBaseDir}/master-templates/stakes`,
       isActive: true,
-      editableFields: stakesJCEditableFields,
+      editableFields: withBannerTextFields(stakesJCEditableFields, ['en', 'fr', 'frca', 'de', 'it', 'es']),
       lockedFields: stakesJCLockedFields,
       languages: ['en', 'fr', 'frca', 'de', 'it', 'es'],
     },
@@ -388,7 +389,7 @@ async function main() {
     where: { slug: 'stakes-casino-template' },
     update: {
       baseFilePath: `${templateBaseDir}/master-templates/stakes-casino`,
-      editableFields: stakesCasinoJCEditableFields,
+      editableFields: withBannerTextFields(stakesCasinoJCEditableFields, ['en']),
       lockedFields: stakesCasinoJCLockedFields,
       languages: ['en'],
     },
@@ -399,7 +400,7 @@ async function main() {
       description: 'Stakes Casino promotional email template — English only',
       baseFilePath: `${templateBaseDir}/master-templates/stakes-casino`,
       isActive: true,
-      editableFields: stakesCasinoJCEditableFields,
+      editableFields: withBannerTextFields(stakesCasinoJCEditableFields, ['en']),
       lockedFields: stakesCasinoJCLockedFields,
       languages: ['en'],
     },
@@ -591,7 +592,7 @@ async function main() {
     where: { slug: 'x7-casino-template' },
     update: {
       baseFilePath: `${templateBaseDir}/master-templates/x7`,
-      editableFields: x7JCEditableFields,
+      editableFields: withBannerTextFields(x7JCEditableFields, ['en', 'fr', 'de', 'it', 'es']),
       lockedFields: x7JCLockedFields,
       languages: ['en', 'fr', 'de', 'it', 'es'],
     },
@@ -602,7 +603,7 @@ async function main() {
       description: 'X7 Casino promotional email template — 5 languages (EN, FR, DE, IT, ES)',
       baseFilePath: `${templateBaseDir}/master-templates/x7`,
       isActive: true,
-      editableFields: x7JCEditableFields,
+      editableFields: withBannerTextFields(x7JCEditableFields, ['en', 'fr', 'de', 'it', 'es']),
       lockedFields: x7JCLockedFields,
       languages: ['en', 'fr', 'de', 'it', 'es'],
     },

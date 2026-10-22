@@ -2,6 +2,8 @@
 // Defaults are taken verbatim from Approved Emails/X7 Casino V2/x7v2-template-{LANG}.html.
 // Shared by prisma/seed.ts (full reseed) and prisma/seed-x7v2.ts (add-only, safe for prod).
 
+import { withBannerTextFields } from './bannerText'
+
 export const X7_V2_SLUG = 'x7-casino-v2-template'
 export const X7_V2_LANGUAGES = ['en', 'fr', 'de', 'it', 'es']
 
@@ -237,7 +239,7 @@ export const x7v2LockedFields = [
 export function x7v2UpdateData(templateBaseDir: string) {
   return {
     baseFilePath: `${templateBaseDir}/master-templates/x7-v2`,
-    editableFields: x7v2EditableFields,
+    editableFields: withBannerTextFields(x7v2EditableFields, X7_V2_LANGUAGES),
     lockedFields: x7v2LockedFields,
     languages: X7_V2_LANGUAGES,
   }

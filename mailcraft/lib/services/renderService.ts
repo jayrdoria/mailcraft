@@ -15,6 +15,7 @@ import { composeLayout } from '@/lib/layoutComposer'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRenderer'
 import { escapeHtml, sanitizeUrl } from '@/lib/utils/escapeHtml'
+import { applyBannerText } from '@/lib/bannerText'
 
 // ─────────────────────────────────────────────
 // Section config transformer
@@ -190,6 +191,9 @@ export async function renderTemplate(params: {
   const savedAlignment = fieldValues.en?._bodyAlignment
   const alignment: BodyAlignment =
     typeof savedAlignment === 'string' && savedAlignment === 'left' ? 'left' : 'center'
+  // Banner text box (no-op unless the master has BANNER markers and it is on).
+  // Before Pass 2 so its {{BANNER_*}} tokens get the normal sanitization.
+  html = applyBannerText(html, brand, fieldValues.en, langValues)
   html = injectEditableTokens(html, langValues, editableFields, brand, alignment)
 
   return html

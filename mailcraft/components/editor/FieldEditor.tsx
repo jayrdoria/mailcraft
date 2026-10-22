@@ -7,6 +7,8 @@ import { useEditorStore } from '@/lib/stores/editorStore'
 import { renderEditorCanvas } from '@/lib/editorCanvas'
 import ParagraphEditor from '@/components/editor/ParagraphEditor'
 import RichTextEditor from '@/components/editor/RichTextEditor'
+import BannerTextControls from '@/components/editor/BannerTextControls'
+import { hasBannerMarkers, BANNER_TITLE_KEY, BANNER_SUB_KEY } from '@/lib/bannerText'
 import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue, BodyParagraph } from '@/lib/types/template'
 import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { LANGUAGE_LABELS, LANGUAGES } from '@/lib/types/template'
@@ -158,8 +160,9 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
       blocks: CustomBlock[],
       layout: LayoutOrder,
       lang: Language,
+      enValues: Record<string, FieldValue>,
     ) => {
-      const rendered = renderEditorCanvas(html, values, sc, br, align, blocks, layout, lang)
+      const rendered = renderEditorCanvas(html, values, sc, br, align, blocks, layout, lang, enValues)
       setRenderedHtml(rendered)
     },
     300
@@ -169,8 +172,11 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
   // Active language's own master file (translated hardcoded copy); EN when it has none
   const previewMasterHtml = masterPreviewHtmlByLang[activeLanguage] ?? masterPreviewHtml
 
+  // Banner text box controls only for masters that opted in (BANNER markers)
+  const showBannerText = hasBannerMarkers(previewMasterHtml)
+
   useEffect(() => {
-    updatePreview(previewMasterHtml, currentLangValues, currentSectionConfig, brand, bodyAlignment, customBlocks, layoutOrder, activeLanguage)
+    updatePreview(previewMasterHtml, currentLangValues, currentSectionConfig, brand, bodyAlignment, customBlocks, layoutOrder, activeLanguage, fieldValues.en ?? {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewMasterHtml, fieldValues, activeSections, deletedSections, activeLanguage, bodyAlignment, customBlocks, layoutOrder])
 
@@ -242,6 +248,12 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
 
               <div className="space-y-3">
                 {fields.map((field) => {
+                  // Banner title/sub are edited inside the banner text box panel
+                  if (field.key === BANNER_SUB_KEY) return null
+                  if (field.key === BANNER_TITLE_KEY) {
+                    return showBannerText ? <BannerTextControls key={field.key} /> : null
+                  }
+
                   const isRequired = requiredFields.includes(field.key) || field.defaultRequired
 
                   if (field.type === 'paragraphs') {

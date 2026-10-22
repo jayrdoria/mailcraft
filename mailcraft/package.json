@@ -12,6 +12,7 @@
     "db:push": "dotenv -e .env.development -- prisma db push",
     "db:seed": "dotenv -e .env.development -- tsx prisma/seed.ts",
     "db:seed:x7v2": "dotenv -e .env.development -- tsx prisma/seed-x7v2.ts",
+    "db:seed:banner-text": "dotenv -e .env.development -- tsx prisma/seed-banner-text.ts",
     "db:studio": "dotenv -e .env.development -- prisma studio"
   },
   "prisma": {

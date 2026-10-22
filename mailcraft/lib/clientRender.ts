@@ -3,6 +3,7 @@ import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRenderer'
 import { renderBlocksById } from '@/lib/services/blockRenderer'
 import { composeLayout } from '@/lib/layoutComposer'
+import { applyBannerText } from '@/lib/bannerText'
 
 // ─────────────────────────────────────────────
 // Token injection
@@ -114,7 +115,9 @@ export function clientRender(
   sectionConfig: SavedSectionConfig[],
   brand = 'STAKES',
   alignment: BodyAlignment = 'center',
-  blocks?: ClientRenderBlocks
+  blocks?: ClientRenderBlocks,
+  // Banner text box settings live on the EN values; defaults to fieldValues
+  enValues?: Record<string, FieldValue>
 ): string {
   let html = masterPreviewHtml
 
@@ -129,6 +132,7 @@ export function clientRender(
   }
 
   html = applySectionConfig(html, sectionConfig)
+  html = applyBannerText(html, brand, enValues ?? fieldValues, fieldValues)
   html = injectTokens(html, fieldValues, brand, alignment)
   return html
 }

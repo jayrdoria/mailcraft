@@ -104,6 +104,17 @@ jobs:
               npx tsx prisma/seed-x7v2.ts \
               || echo "WARNING: X7 Casino V2 registration failed — app is deployed; check the log above"
 
+            # Banner text box fields (add-only — appends BANNER_TITLE/BANNER_SUB to the
+            # built-in masters if missing; never touches saved templates). Also clears the
+            # master HTML cache so the new BANNER markers are live immediately.
+            docker run --rm \
+              --network mailcraft_default \
+              --env-file .env \
+              -e REDIS_URL=redis://redis:6379 \
+              ghcr.io/jayrdoria/mailcraft:migrate \
+              npx tsx prisma/seed-banner-text.ts \
+              || echo "WARNING: banner text fields failed — app is deployed; check the log above"
+
             docker image prune -f
 
             echo "MailCraft deployed at employee.netovation.eu/mailcraft"
