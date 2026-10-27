@@ -4,6 +4,7 @@ import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRendere
 import { renderBlocksById } from '@/lib/services/blockRenderer'
 import { composeLayout } from '@/lib/layoutComposer'
 import { applyBannerText } from '@/lib/bannerText'
+import { applyV2Layouts } from '@/lib/v2Layouts'
 
 // ─────────────────────────────────────────────
 // Token injection
@@ -133,6 +134,7 @@ export function clientRender(
 
   html = applySectionConfig(html, sectionConfig)
   html = applyBannerText(html, brand, enValues ?? fieldValues, fieldValues)
+  html = applyV2Layouts(html, enValues ?? fieldValues, fieldValues)
   html = injectTokens(html, fieldValues, brand, alignment)
   return html
 }

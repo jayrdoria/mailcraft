@@ -230,11 +230,16 @@ interface EditorStore {
   setFieldValueAllLanguages: (key: string, value: FieldValue) => void
   /** Different value per supported language (e.g. a translated CTA preset) */
   setFieldValuePerLanguage: (key: string, valueFor: (lang: Language) => FieldValue) => void
+  /** Several fields in several languages in one update (e.g. filling thumbnail slots from presets) */
+  setFieldValuesBatch: (patch: Partial<Record<Language, Record<string, FieldValue>>>) => void
   applySetupConfig: (config: SetupConfig) => void
   setDevice: (device: EditorStore['device']) => void
   setBodyAlignment: (alignment: BodyAlignment) => void
   // Banner text box settings — _banner* meta-keys on fieldValues.en (lib/bannerText.ts)
   setBannerMeta: (meta: Record<string, string>) => void
+  // X7 V2 layout choices — meta-keys on fieldValues.en (lib/v2Layouts.ts). `fill` backfills
+  // per-language defaults for fields the choice needs, only where a language has no value yet.
+  setLayoutMeta: (meta: Record<string, string>, fill?: Partial<Record<Language, Record<string, FieldValue>>>) => void
   setActiveLanguage: (lang: Language) => void
   openSetupModal: () => void
   closeSetupModal: () => void
@@ -499,6 +504,16 @@ export const useEditorStore = create<EditorStore>((set) => ({
       return { isDirty: true, fieldValues: updated }
     }),
 
+  setFieldValuesBatch: (patch) =>
+    set((state) => {
+      const updated = { ...state.fieldValues }
+      for (const lang of state.supportedLanguages) {
+        const values = patch[lang]
+        if (values) updated[lang] = { ...updated[lang], ...values }
+      }
+      return { isDirty: true, fieldValues: updated }
+    }),
+
   applySetupConfig: (config) => {
     const { activeSections, requiredFields, deletedSections } = config
     set({ activeSections, deletedSections, requiredFields, isDirty: true })
@@ -522,6 +537,26 @@ export const useEditorStore = create<EditorStore>((set) => ({
         en: { ...state.fieldValues.en, ...meta },
       },
     })),
+
+  setLayoutMeta: (meta, fill) =>
+    set((state) => {
+      const fieldValues: MultiLanguageFieldValues = {
+        ...state.fieldValues,
+        en: { ...state.fieldValues.en, ...meta },
+      }
+      if (fill) {
+        for (const lang of state.supportedLanguages) {
+          const add = fill[lang]
+          if (!add) continue
+          const current = { ...fieldValues[lang] }
+          for (const [key, value] of Object.entries(add)) {
+            if (current[key] === undefined) current[key] = value
+          }
+          fieldValues[lang] = current
+        }
+      }
+      return { isDirty: true, fieldValues }
+    }),
 
   setDevice: (device) => set({ device }),
   setActiveLanguage: (lang) => set({ activeLanguage: lang }),

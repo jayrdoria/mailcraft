@@ -230,6 +230,30 @@ model CtaPreset {
 }
 
 // ─────────────────────────────────────────────
+// THUMBNAIL PRESET — quick picks for a template's thumbnail slots, per brand.
+// kind 'card' fills THUMBn_* (all brands), kind 'icon' fills ICONn_* (X7 V2 Icons design).
+// labels/sublabels/links are { en, fr, de, it, es } — FRCA uses FR.
+// sublabels + links are optional (empty language = leave the template's value as is).
+// ─────────────────────────────────────────────
+
+model ThumbnailPreset {
+  id        String @id @default(cuid())
+  brand     Brand
+  kind      String
+  imageUrl  String
+  labels    Json
+  sublabels Json?
+  links     Json?
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brand, kind, sortOrder])
+  @@map("thumbnail_presets")
+}
+
+// ─────────────────────────────────────────────
 // ACTIVITY LOG
 // ─────────────────────────────────────────────
 

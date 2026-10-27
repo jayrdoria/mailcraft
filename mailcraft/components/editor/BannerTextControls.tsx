@@ -32,11 +32,12 @@ const BOX_OPTIONS: { value: BannerBox; label: string }[] = [
 ]
 
 // Icon lines (x1,x2 per row) + vertical offset — mirrors the approved POC icons
-const ALIGN_OPTIONS: { value: BannerAlign; label: string; lines: [number, number][]; y: number }[] = [
-  { value: 'left', label: 'Left', lines: [[6, 18], [6, 14], [6, 16]], y: 9 },
-  { value: 'center', label: 'Centre', lines: [[6, 18], [8, 16], [7, 17]], y: 9 },
-  { value: 'right', label: 'Right', lines: [[6, 18], [10, 18], [8, 18]], y: 9 },
-  { value: 'bottom', label: 'Bottom centre', lines: [[6, 18], [8, 16], [7, 17]], y: 12 },
+// label = short one-line caption (so all four icons line up); title = full name in the tooltip
+const ALIGN_OPTIONS: { value: BannerAlign; label: string; title: string; lines: [number, number][]; y: number }[] = [
+  { value: 'left', label: 'Left', title: 'Left', lines: [[6, 18], [6, 14], [6, 16]], y: 9 },
+  { value: 'center', label: 'Centre', title: 'Centre', lines: [[6, 18], [8, 16], [7, 17]], y: 9 },
+  { value: 'right', label: 'Right', title: 'Right', lines: [[6, 18], [10, 18], [8, 18]], y: 9 },
+  { value: 'bottom', label: 'Bottom', title: 'Bottom centre', lines: [[6, 18], [8, 16], [7, 17]], y: 12 },
 ]
 
 function AlignIcon({ lines, y }: { lines: [number, number][]; y: number }) {
@@ -279,9 +280,10 @@ export default function BannerTextControls() {
                   type="button"
                   role="radio"
                   aria-checked={settings.align === o.value}
-                  title={o.label}
+                  title={o.title}
+                  aria-label={o.title}
                   onClick={() => setBannerMeta({ [BANNER_META_KEYS.align]: o.value })}
-                  className={cn(segBtn(settings.align === o.value), 'flex flex-col items-center gap-0.5 px-1 text-[10px] leading-tight')}
+                  className={cn(segBtn(settings.align === o.value), 'flex flex-col items-center justify-center gap-0.5 px-1 text-[10px] leading-tight whitespace-nowrap')}
                 >
                   <AlignIcon lines={o.lines} y={o.y} />
                   {o.label}

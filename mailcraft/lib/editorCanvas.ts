@@ -16,6 +16,7 @@ import { renderBlocksById } from '@/lib/services/blockRenderer'
 import { buildSectionUnits } from '@/lib/layoutComposer'
 import { applySectionConfig, injectTokens } from '@/lib/clientRender'
 import { applyBannerText } from '@/lib/bannerText'
+import { applyV2Layouts } from '@/lib/v2Layouts'
 
 // Attribute name used to identify a block element inside the preview iframe.
 export const MCB_ID_ATTR = 'data-mcb-id'
@@ -131,6 +132,7 @@ export function renderEditorCanvas(
   let html = composeEditorLayout(masterPreviewHtml, layoutOrder, rendered)
   html = applySectionConfig(html, sectionConfig)
   html = applyBannerText(html, brand, enValues ?? fieldValues, fieldValues)
+  html = applyV2Layouts(html, enValues ?? fieldValues, fieldValues)
   html = tagFieldElements(html, fieldValues) // editor-only: mark fields for highlight
   html = injectTokens(html, fieldValues, brand, alignment)
   return html

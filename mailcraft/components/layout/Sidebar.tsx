@@ -13,6 +13,7 @@ import {
   Activity,
   LogOut,
   MousePointerClick,
+  Images,
   Menu,
   X,
 } from 'lucide-react'
@@ -43,6 +44,7 @@ const mainNav: NavItem[] = [
 ]
 
 const ctaPresetsNav: NavItem = { label: 'CTA Presets', href: '/cta-presets', icon: MousePointerClick }
+const thumbnailPresetsNav: NavItem = { label: 'Thumbnail Presets', href: '/thumbnail-presets', icon: Images }
 
 const comingSoonNav: NavItem[] = [
   {
@@ -138,7 +140,10 @@ export default function Sidebar({ role, name, email, canManageCtaPresets = false
             />
           ))}
           {canManageCtaPresets && (
-            <NavLink item={ctaPresetsNav} active={isActive(ctaPresetsNav.href)} onClick={closeOnMobile} />
+            <>
+              <NavLink item={ctaPresetsNav} active={isActive(ctaPresetsNav.href)} onClick={closeOnMobile} />
+              <NavLink item={thumbnailPresetsNav} active={isActive(thumbnailPresetsNav.href)} onClick={closeOnMobile} />
+            </>
           )}
 
           <div className="my-2 border-t" />

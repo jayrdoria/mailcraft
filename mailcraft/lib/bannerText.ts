@@ -200,17 +200,10 @@ function cssSafeUrl(value: unknown): string {
     .replace(/\\/g, '%5C')
 }
 
-// Fallback cell colour (images blocked / Gmail app with non-Google accounts):
-// dark text → white cell, light text → black cell, so the copy stays readable.
-function fallbackBg(textColor: string): string {
-  const n = Number.parseInt(textColor.slice(1), 16)
-  const lin = (c: number) => {
-    const s = c / 255
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
-  }
-  const lum = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)
-  return lum > 0.18 ? '#000000' : '#FFFFFF'
-}
+// Cell colour behind the banner = the masters' own banner background (black), whatever
+// the text colour. A per-text-colour fallback (white behind dark text) showed through
+// banners with transparent edges, so the box never changes what is behind the image.
+const BANNER_BG = '#000000'
 
 function hasText(value: FieldValue | undefined): boolean {
   return typeof value === 'string' && value.trim() !== ''
@@ -231,7 +224,7 @@ function buildBannerRow(
   const bgUrl = cssSafeUrl(values.BANNER_IMG)
   const showTitle = hasText(values[BANNER_TITLE_KEY])
   const showSub = hasText(values[BANNER_SUB_KEY])
-  const bg = fallbackBg(showTitle || !showSub ? s.titleColor : s.subColor)
+  const bg = BANNER_BG
 
   const align = s.align === 'left' || s.align === 'right' ? s.align : 'center'
   const valign = s.align === 'bottom' ? 'bottom' : 'middle'

@@ -244,3 +244,41 @@ export const ctaPresetSchema = z.object({
 export const reorderCtaPresetsSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(500),
 })
+
+// ─────────────────────────────────────────────
+// Thumbnail presets
+// ─────────────────────────────────────────────
+
+const httpUrl = z
+  .string()
+  .trim()
+  .max(2000)
+  .url('Enter a full https:// URL')
+  .refine((v) => /^https?:\/\//i.test(v), 'Only http(s) links are allowed')
+
+const presetLabel = z.string().trim().min(1, 'Every language needs a label').max(100)
+const presetOptionalText = z.string().trim().max(100)
+const presetOptionalUrl = z.union([z.literal(''), httpUrl])
+
+const presetTexts = <T extends z.ZodTypeAny>(t: T) => z.object({ en: t, fr: t, de: t, it: t, es: t })
+
+export const thumbnailPresetSchema = z
+  .object({
+    brand: z.enum(['STAKES', 'STAKES_CASINO', 'X7', 'X7_V2']),
+    kind: z.enum(['card', 'icon']),
+    imageUrl: httpUrl,
+    labels: presetTexts(presetLabel),
+    // Optional — empty languages are stored as '' and leave the template's value as is
+    sublabels: presetTexts(presetOptionalText).nullable().optional(),
+    links: presetTexts(presetOptionalUrl).nullable().optional(),
+  })
+  .refine((p) => p.kind === 'card' || p.brand === 'X7_V2', {
+    message: 'Icon presets are only available for X7 Casino V2',
+    path: ['kind'],
+  })
+
+export const reorderThumbnailPresetsSchema = z.object({
+  brand: z.enum(['STAKES', 'STAKES_CASINO', 'X7', 'X7_V2']),
+  kind: z.enum(['card', 'icon']),
+  ids: z.array(z.string().min(1)).min(1).max(500),
+})

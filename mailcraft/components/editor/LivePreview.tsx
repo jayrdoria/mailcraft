@@ -41,9 +41,22 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
   function endDrag(){ document.body.classList.remove('mcb-dragging'); clearOver(); }
 
   // Field highlight (editor Content-tab focus → outline the matching element).
-  var fieldEls=[];
-  function clearField(){ for(var i=0;i<fieldEls.length;i++){ var el=fieldEls[i]; el.style.outline=el.__mcbFO||''; el.style.outlineOffset=el.__mcbFOO||''; el.style.borderRadius=el.__mcbFBR||''; el.style.display=el.__mcbFD||''; } fieldEls=[]; }
+  // Styled as an editor marker (dashed blue + "Editing" tag) so it never reads as
+  // part of the design, and it fades out after a moment. Editor-only: exports
+  // never contain this script.
+  var fieldEls=[], fieldTag=null, fieldTimer=null, fieldFadeTimer=null;
+  function clearField(){
+    for(var i=0;i<fieldEls.length;i++){ var el=fieldEls[i]; el.style.outline=el.__mcbFO||''; el.style.outlineOffset=el.__mcbFOO||''; el.style.borderRadius=el.__mcbFBR||''; el.style.display=el.__mcbFD||''; }
+    fieldEls=[];
+    if(fieldTag && fieldTag.parentNode){ fieldTag.parentNode.removeChild(fieldTag); }
+    fieldTag=null;
+  }
+  function fadeField(){
+    if(fieldTag){ fieldTag.style.opacity='0'; }
+    fieldFadeTimer=setTimeout(clearField,250);
+  }
   function highlightField(key,doScroll){
+    clearTimeout(fieldTimer); clearTimeout(fieldFadeTimer);
     clearField();
     if(!key) return;
     var els=document.querySelectorAll('[data-mc-field~="'+key+'"]');
@@ -53,8 +66,18 @@ body.mcb-dragging .mcb-dz.mcb-over .mcb-dz-line{border-style:solid;background:rg
       // so only the left/right edges show — promote to inline-block so it wraps.
       var disp=window.getComputedStyle?window.getComputedStyle(el).display:'';
       if(disp==='inline'){ el.style.display='inline-block'; }
-      el.style.outline='2px solid #f59e0b'; el.style.outlineOffset='2px'; el.style.borderRadius='2px';
+      el.style.outline='2px dashed #38bdf8'; el.style.outlineOffset='3px'; el.style.borderRadius='2px';
       fieldEls.push(el);
+    }
+    if(els[0]){
+      var b=els[0].getBoundingClientRect();
+      fieldTag=document.createElement('div');
+      fieldTag.textContent='Editing';
+      fieldTag.style.cssText='position:absolute;z-index:9999;pointer-events:none;padding:1px 6px;border-radius:3px;background:#38bdf8;color:#0c1a2a;font:600 10px/16px system-ui,sans-serif;letter-spacing:.3px;transition:opacity .25s;opacity:1;';
+      fieldTag.style.left=Math.max(0,b.left+window.scrollX-3)+'px';
+      fieldTag.style.top=Math.max(0,b.top+window.scrollY-21)+'px';
+      document.body.appendChild(fieldTag);
+      fieldTimer=setTimeout(fadeField,2000);
     }
     if(doScroll && els[0]){ var r=els[0].getBoundingClientRect(); window.parent.postMessage({type:'MCB_FIELD_SCROLL',top:r.top,height:r.height},'*'); }
   }

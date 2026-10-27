@@ -9,6 +9,14 @@ import ParagraphEditor from '@/components/editor/ParagraphEditor'
 import RichTextEditor from '@/components/editor/RichTextEditor'
 import BannerTextControls from '@/components/editor/BannerTextControls'
 import { hasBannerMarkers, BANNER_TITLE_KEY, BANNER_SUB_KEY } from '@/lib/bannerText'
+import V2LayoutControls from '@/components/editor/V2LayoutControls'
+import {
+  hasBodyLayoutMarkers,
+  hasThumbLayoutMarkers,
+  isLayoutFieldHidden,
+  parseLayoutSettings,
+  GAME_FIELD_KEYS,
+} from '@/lib/v2Layouts'
 import type { TemplateFieldConfig, Language, SavedSectionConfig, FieldValue, BodyParagraph } from '@/lib/types/template'
 import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { LANGUAGE_LABELS, LANGUAGES } from '@/lib/types/template'
@@ -16,12 +24,17 @@ import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/apiFetch'
 import { CTA_PRESET_FIELD_KEY, ctaPresetText } from '@/lib/types/ctaPreset'
 import type { CtaPreset } from '@/lib/types/ctaPreset'
+import type { ThumbnailPreset } from '@/lib/types/thumbnailPreset'
+import ThumbnailSlots from '@/components/editor/ThumbnailSlots'
+import { isSlotField, slotsFromFields } from '@/lib/thumbnailSlots'
 
 function normalizeGroup(group: string): string {
   return group.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
 }
 
-const SYNC_ALL_FIELDS = new Set(['BANNER_IMG', 'THUMB1_IMG', 'THUMB2_IMG'])
+// Banner image (may differ per language) and untranslated game names. Thumbnail / icon
+// images live in the slot cards, where the image is always the same in every language.
+const SYNC_ALL_FIELDS = new Set(['BANNER_IMG', ...GAME_FIELD_KEYS])
 
 interface FieldEditorProps {
   editableFields: TemplateFieldConfig[]
@@ -117,21 +130,36 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
       supportedLanguages.every((lang) => fieldValues[lang]?.[CTA_PRESET_FIELD_KEY] === ctaPresetText(p, lang))
     )?.id ?? ''
 
+  // Thumbnail presets (slot cards' "Change" / "Fill from presets") — only fetched when
+  // this template has thumbnail/icon slots
+  const allSlots = slotsFromFields(editableFields.map((f) => f.key))
+  const hasThumbSlots = allSlots.length > 0
+  const { data: thumbPresets = [] } = useQuery<ThumbnailPreset[]>({
+    queryKey: ['thumbnail-presets', brand],
+    queryFn: async () => {
+      const res = await apiFetch(`/api/thumbnail-presets?brand=${encodeURIComponent(brand)}`)
+      if (!res.ok) throw new Error('Failed to load thumbnail presets')
+      const json = await res.json()
+      return json.data
+    },
+    enabled: hasThumbSlots && !!brand,
+    staleTime: 60_000,
+  })
+
   // Session-only: tracks which url fields are synced across all languages
   const [syncedFields, setSyncedFields] = useState<Set<string>>(new Set())
 
   function handleSyncToggle(fieldKey: string, currentValue: string) {
+    const turningOn = !syncedFields.has(fieldKey)
     setSyncedFields((prev) => {
       const next = new Set(prev)
-      if (next.has(fieldKey)) {
-        next.delete(fieldKey)
-      } else {
-        next.add(fieldKey)
-        // Immediately copy current value to all languages
-        setFieldValueAllLanguages(fieldKey, currentValue)
-      }
+      if (turningOn) next.add(fieldKey)
+      else next.delete(fieldKey)
       return next
     })
+    // Immediately copy current value to all languages. Outside the state updater:
+    // updaters must stay pure (React runs them during render).
+    if (turningOn) setFieldValueAllLanguages(fieldKey, currentValue)
   }
 
   function handleUrlChange(fieldKey: string, newValue: string) {
@@ -174,6 +202,13 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
 
   // Banner text box controls only for masters that opted in (BANNER markers)
   const showBannerText = hasBannerMarkers(previewMasterHtml)
+  // X7 V2 body / thumbnail design choices only for masters that opted in (V2BODY / V2THUMBS markers)
+  const layoutOpts = { body: hasBodyLayoutMarkers(previewMasterHtml), thumbs: hasThumbLayoutMarkers(previewMasterHtml) }
+  const layoutSettings = parseLayoutSettings(fieldValues.en)
+  // Slots of the design currently shown (V2: Cards or Icons; other masters: their THUMBn slots).
+  // Rendered once as slot cards where the first slot field sits in the field list.
+  const visibleSlots = allSlots.filter((s) => !isLayoutFieldHidden(`${s.prefix}_IMG`, layoutSettings, layoutOpts))
+  const firstSlotFieldKey = editableFields.find((f) => isSlotField(f.key) && !isLayoutFieldHidden(f.key, layoutSettings, layoutOpts))?.key
 
   useEffect(() => {
     updatePreview(previewMasterHtml, currentLangValues, currentSectionConfig, brand, bodyAlignment, customBlocks, layoutOrder, activeLanguage, fieldValues.en ?? {})
@@ -247,11 +282,25 @@ export default function FieldEditor({ editableFields, sectionConfig }: FieldEdit
               )}
 
               <div className="space-y-3">
+                {normalizedName === 'BODY' && layoutOpts.body && (
+                  <V2LayoutControls part="body" editableFields={editableFields} />
+                )}
+                {normalizedName === 'THUMBNAILS' && layoutOpts.thumbs && (
+                  <V2LayoutControls part="thumbs" editableFields={editableFields} />
+                )}
                 {fields.map((field) => {
                   // Banner title/sub are edited inside the banner text box panel
                   if (field.key === BANNER_SUB_KEY) return null
                   if (field.key === BANNER_TITLE_KEY) {
                     return showBannerText ? <BannerTextControls key={field.key} /> : null
+                  }
+                  // Fields of a body / thumbnail design that isn't selected
+                  if (isLayoutFieldHidden(field.key, layoutSettings, layoutOpts)) return null
+                  // Thumbnail / icon fields → slot cards (rendered once, at the first slot field)
+                  if (isSlotField(field.key)) {
+                    return field.key === firstSlotFieldKey ? (
+                      <ThumbnailSlots key="thumbnail-slots" slots={visibleSlots} editableFields={editableFields} presets={thumbPresets} />
+                    ) : null
                   }
 
                   const isRequired = requiredFields.includes(field.key) || field.defaultRequired
