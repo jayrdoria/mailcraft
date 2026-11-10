@@ -1,7 +1,7 @@
 import { apiError, apiSuccess, apiHandler } from '@/lib/api'
 import { requireScope } from '@/lib/services/accessService'
 import { requireCtaPresetManager } from '@/lib/services/ctaPresetService'
-import { listThumbnailPresets, optionalTexts, thumbnailPresetSelect } from '@/lib/services/thumbnailPresetService'
+import { listThumbnailPresets, presetWriteData, thumbnailPresetSelect } from '@/lib/services/thumbnailPresetService'
 import { thumbnailPresetSchema } from '@/lib/schemas'
 import { rateLimit } from '@/lib/rateLimit'
 import { prisma } from '@/lib/prisma'
@@ -33,16 +33,11 @@ export const POST = apiHandler(async (req) => {
   const parsed = thumbnailPresetSchema.safeParse(body)
   if (!parsed.success) return apiError(parsed.error.errors[0].message, 400)
 
-  const { brand, kind, imageUrl, labels, sublabels, links } = parsed.data
+  const { brand, kind } = parsed.data
   const last = await prisma.thumbnailPreset.aggregate({ where: { brand, kind }, _max: { sortOrder: true } })
   const preset = await prisma.thumbnailPreset.create({
     data: {
-      brand,
-      kind,
-      imageUrl,
-      labels,
-      sublabels: optionalTexts(sublabels),
-      links: optionalTexts(links),
+      ...presetWriteData(parsed.data),
       sortOrder: (last._max.sortOrder ?? -1) + 1,
     },
     select: thumbnailPresetSelect,

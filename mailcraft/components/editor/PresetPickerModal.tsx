@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { X, Check, ImageOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { presetText, type ThumbnailPreset } from '@/lib/types/thumbnailPreset'
+import { presetImage, presetText, type ThumbnailPreset } from '@/lib/types/thumbnailPreset'
 import type { Language } from '@/lib/types/template'
 import type { ThumbSlot } from '@/lib/thumbnailSlots'
 
@@ -126,7 +126,7 @@ export default function PresetPickerModal({
                   <li key={slot.prefix} className="flex items-center gap-3 rounded-lg border p-2">
                     <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">{slot.title}</span>
                     <div className="h-10 w-14 shrink-0 overflow-hidden rounded border">
-                      <Thumb src={p.imageUrl} alt="" />
+                      <Thumb src={presetImage(p, activeLanguage)} alt="" />
                     </div>
                     <span className="text-sm font-medium truncate">{label(p)}</span>
                   </li>
@@ -158,7 +158,7 @@ export default function PresetPickerModal({
                     )}
                   >
                     <div className="aspect-[4/3] w-full">
-                      <Thumb src={p.imageUrl} alt="" />
+                      <Thumb src={presetImage(p, activeLanguage)} alt="" />
                     </div>
                     <div className="px-2.5 py-2">
                       <p className="text-xs font-semibold truncate">{label(p)}</p>

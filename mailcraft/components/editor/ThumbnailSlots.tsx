@@ -12,7 +12,8 @@ import type { ThumbnailPreset } from '@/lib/types/thumbnailPreset'
 // ─────────────────────────────────────────────
 // Thumbnail slots — one compact card per slot (Thumbnail 1–2 / Icon 1–3):
 // image + label + link at a glance, "Change" (preset picker) and "Edit" (raw fields).
-// The image is the same in every language; label / sublabel / link are per language.
+// The image is the same in every language unless a preset (or "This language") set one per
+// language; label / sublabel / link are per language.
 // "Fill from presets" fills several slots in one go (PresetPickerModal, multi mode).
 // ─────────────────────────────────────────────
 
@@ -48,7 +49,10 @@ function SlotCard({
   const setFieldValue = useEditorStore((s) => s.setFieldValue)
   const setFieldValueAllLanguages = useEditorStore((s) => s.setFieldValueAllLanguages)
   const setActiveFieldKey = useEditorStore((s) => s.setActiveFieldKey)
+  const supportedLanguages = useEditorStore((s) => s.supportedLanguages)
   const [open, setOpen] = useState(false)
+  // Image edit scope: explicit pick, else "This language" once the languages already differ
+  const [imgScope, setImgScope] = useState<'all' | 'lang' | null>(null)
 
   const k = (part: string) => `${slot.prefix}_${part}`
   const langValues = fieldValues[activeLanguage] ?? {}
@@ -59,6 +63,9 @@ function SlotCard({
   const lang = LANGUAGE_LABELS[activeLanguage]
   const anyRequired = ['IMG', 'LINK', 'LABEL', 'SUBLABEL'].some((p) => fields.has(k(p)) && required(k(p)))
   const link = value('LINK').replace(/^https?:\/\//, '')
+  const multiLang = supportedLanguages.length > 1
+  const imagesDiffer = new Set(supportedLanguages.map((l) => fieldValues[l]?.[k('IMG')] ?? '')).size > 1
+  const scope = multiLang ? (imgScope ?? (imagesDiffer ? 'lang' : 'all')) : 'all'
 
   const textField = (part: 'LABEL' | 'SUBLABEL' | 'LINK', name: string) =>
     fields.has(k(part)) && (
@@ -119,14 +126,45 @@ function SlotCard({
         <div className="space-y-3 border-t p-2.5">
           {fields.has(k('IMG')) && (
             <div onFocusCapture={() => setActiveFieldKey(k('IMG'))}>
-              <label className="flex items-center gap-1 text-xs font-medium mb-1">
-                Image URL <span className="font-normal text-muted-foreground">(same image in all languages)</span>
-                {required(k('IMG')) && <span className="text-destructive">*</span>}
-              </label>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <label className="flex items-center gap-1 text-xs font-medium">
+                  Image URL{' '}
+                  <span className="font-normal text-muted-foreground">
+                    {scope === 'all' ? '(same image in all languages)' : `(${lang} only)`}
+                  </span>
+                  {required(k('IMG')) && <span className="text-destructive">*</span>}
+                </label>
+                {multiLang && (
+                  <div role="radiogroup" aria-label={`${slot.title} image applies to`} className="flex shrink-0 overflow-hidden rounded-md border text-[11px]">
+                    {(['all', 'lang'] as const).map((sc) => (
+                      <button
+                        key={sc}
+                        type="button"
+                        role="radio"
+                        aria-checked={scope === sc}
+                        onClick={() => setImgScope(sc)}
+                        className={cn(
+                          'px-2 py-0.5 cursor-pointer whitespace-nowrap border-r last:border-r-0',
+                          scope === sc ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
+                        )}
+                      >
+                        {sc === 'all' ? 'All languages' : `${lang} only`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {scope === 'all' && imagesDiffer && (
+                <p className="mb-1 text-[11px] text-amber-600 dark:text-amber-400">
+                  Languages have different images — typing here replaces all of them.
+                </p>
+              )}
               <input
                 type="url"
                 value={value('IMG')}
-                onChange={(e) => setFieldValueAllLanguages(k('IMG'), e.target.value)}
+                onChange={(e) =>
+                  scope === 'all' ? setFieldValueAllLanguages(k('IMG'), e.target.value) : setFieldValue(k('IMG'), e.target.value)
+                }
                 placeholder="https://userimg-assets.customeriomail.com/..."
                 aria-label={`${slot.title} Image URL`}
                 className={inputCls}

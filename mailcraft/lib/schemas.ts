@@ -259,18 +259,33 @@ const httpUrl = z
 const presetLabel = z.string().trim().min(1, 'Every language needs a label').max(100)
 const presetOptionalText = z.string().trim().max(100)
 const presetOptionalUrl = z.union([z.literal(''), httpUrl])
+// New optional URL fields (per-language images, FRCA link): whitespace-only counts as blank
+const presetBlankableUrl = z.string().trim().pipe(presetOptionalUrl)
 
-const presetTexts = <T extends z.ZodTypeAny>(t: T) => z.object({ en: t, fr: t, de: t, it: t, es: t })
+// FRCA is optional everywhere (Stakes only — other brands' values are dropped by the service)
+const presetTexts = <T extends z.ZodTypeAny, F extends z.ZodTypeAny>(t: T, frca: F) =>
+  z.object({ en: t, fr: t, de: t, it: t, es: t, frca: frca.optional() })
+// Per-language image overrides — blank / missing = the main image
+const presetImages = z.object({
+  en: presetBlankableUrl.optional(),
+  fr: presetBlankableUrl.optional(),
+  frca: presetBlankableUrl.optional(),
+  de: presetBlankableUrl.optional(),
+  it: presetBlankableUrl.optional(),
+  es: presetBlankableUrl.optional(),
+})
 
 export const thumbnailPresetSchema = z
   .object({
     brand: z.enum(['STAKES', 'STAKES_CASINO', 'X7', 'X7_V2']),
     kind: z.enum(['card', 'icon']),
     imageUrl: httpUrl,
-    labels: presetTexts(presetLabel),
+    imageUrls: presetImages.nullable().optional(),
+    // Blank FRCA label = FR label
+    labels: presetTexts(presetLabel, presetOptionalText),
     // Optional — empty languages are stored as '' and leave the template's value as is
-    sublabels: presetTexts(presetOptionalText).nullable().optional(),
-    links: presetTexts(presetOptionalUrl).nullable().optional(),
+    sublabels: presetTexts(presetOptionalText, presetOptionalText).nullable().optional(),
+    links: presetTexts(presetOptionalUrl, presetBlankableUrl).nullable().optional(),
   })
   .refine((p) => p.kind === 'card' || p.brand === 'X7_V2', {
     message: 'Icon presets are only available for X7 Casino V2',

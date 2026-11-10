@@ -19,7 +19,8 @@ export default async function ThumbnailPresetsPage() {
         <h1 className="text-xl font-semibold">Thumbnail Presets</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           Quick picks for the editor&apos;s thumbnail slots, per brand. Picking one fills the image, label, sublabel and link
-          in every language — FRCA uses the FR text. Empty optional languages leave the template&apos;s value as is.
+          in every language. Stakes can set FRCA separately: an empty FRCA label uses the FR text, an empty FRCA link
+          keeps the template&apos;s FRCA link. Empty optional languages leave the template&apos;s value as is.
         </p>
       </div>
       <ThumbnailPresetsClient />

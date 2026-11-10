@@ -1,6 +1,6 @@
 import { apiError, apiSuccess, apiHandler } from '@/lib/api'
 import { requireCtaPresetManager } from '@/lib/services/ctaPresetService'
-import { optionalTexts, thumbnailPresetSelect } from '@/lib/services/thumbnailPresetService'
+import { presetWriteData, thumbnailPresetSelect } from '@/lib/services/thumbnailPresetService'
 import { thumbnailPresetSchema } from '@/lib/schemas'
 import { rateLimit } from '@/lib/rateLimit'
 import { prisma } from '@/lib/prisma'
@@ -27,7 +27,7 @@ export const PATCH = apiHandler(async (req, ctx) => {
   const existing = await prisma.thumbnailPreset.findUnique({ where: { id }, select: { brand: true, kind: true } })
   if (!existing) return apiError('Preset not found', 404)
 
-  const { brand, kind, imageUrl, labels, sublabels, links } = parsed.data
+  const { brand, kind } = parsed.data
   let sortOrder: number | undefined
   if (existing.brand !== brand || existing.kind !== kind) {
     const last = await prisma.thumbnailPreset.aggregate({ where: { brand, kind }, _max: { sortOrder: true } })
@@ -37,12 +37,7 @@ export const PATCH = apiHandler(async (req, ctx) => {
   const preset = await prisma.thumbnailPreset.update({
     where: { id },
     data: {
-      brand,
-      kind,
-      imageUrl,
-      labels,
-      sublabels: optionalTexts(sublabels),
-      links: optionalTexts(links),
+      ...presetWriteData(parsed.data),
       ...(sortOrder !== undefined ? { sortOrder } : {}),
     },
     select: thumbnailPresetSelect,

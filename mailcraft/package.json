@@ -14,7 +14,9 @@
     "db:seed:x7v2": "dotenv -e .env.development -- tsx prisma/seed-x7v2.ts",
     "db:seed:banner-text": "dotenv -e .env.development -- tsx prisma/seed-banner-text.ts",
     "db:seed:x7v2-layouts": "dotenv -e .env.development -- tsx prisma/seed-x7v2-layouts.ts",
-    "db:studio": "dotenv -e .env.development -- prisma studio"
+    "db:studio": "dotenv -e .env.development -- prisma studio",
+    "regress": "node tests/regression/run.mjs check",
+    "regress:baseline": "node tests/regression/run.mjs baseline"
   },
   "prisma": {
     "seed": "dotenv -e .env.development -- tsx prisma/seed.ts"

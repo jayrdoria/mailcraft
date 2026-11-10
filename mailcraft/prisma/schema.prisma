@@ -241,6 +241,7 @@ model ThumbnailPreset {
   brand     Brand
   kind      String
   imageUrl  String
+  imageUrls Json? // per-language image overrides { fr?: url, ... }; null = imageUrl everywhere
   labels    Json
   sublabels Json?
   links     Json?

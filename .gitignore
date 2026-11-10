@@ -51,3 +51,9 @@ mailcraft/data/templates/imported/
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude ticket plans (planning docs)
+.claude/tickets/
+
+# Regression suite output (baselines, runs, local session cookies)
+mailcraft/tests/regression/.out/

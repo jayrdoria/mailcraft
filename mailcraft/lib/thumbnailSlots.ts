@@ -1,5 +1,5 @@
 import type { FieldValue, Language } from '@/lib/types/template'
-import { presetText, type PresetKind, type ThumbnailPreset } from '@/lib/types/thumbnailPreset'
+import { presetImage, presetLink, presetText, type PresetKind, type ThumbnailPreset } from '@/lib/types/thumbnailPreset'
 
 // ─────────────────────────────────────────────
 // THUMBNAIL SLOTS — groups a template's THUMBn_* / ICONn_* fields into slots for
@@ -34,8 +34,9 @@ export function slotsFromFields(fieldKeys: Iterable<string>): ThumbSlot[] {
   return [...seen.values()].sort((a, b) => (a.kind === b.kind ? a.index - b.index : a.kind === 'card' ? -1 : 1))
 }
 
-// Per-language values a preset writes into one slot. Image = same everywhere; label,
-// sublabel and link are translated (FRCA → FR). Empty optional texts keep the
+// Per-language values a preset writes into one slot. Image = main image unless the preset
+// has a per-language override; label / sublabel are translated (blank FRCA → FR); link is
+// per language (blank FRCA keeps the template's FRCA link). Empty optional texts keep the
 // language's current value. Only fields the template actually has are written.
 export function presetSlotValues(
   preset: ThumbnailPreset,
@@ -51,13 +52,13 @@ export function presetSlotValues(
   }
   for (const lang of languages) {
     const values: Record<string, FieldValue> = {}
-    if (fieldKeys.has(`${prefix}_IMG`)) values[`${prefix}_IMG`] = preset.imageUrl
+    if (fieldKeys.has(`${prefix}_IMG`)) values[`${prefix}_IMG`] = presetImage(preset, lang)
     if (fieldKeys.has(`${prefix}_LABEL`)) values[`${prefix}_LABEL`] = presetText(preset.labels, lang)
     if (fieldKeys.has(`${prefix}_SUBLABEL`) && preset.sublabels) {
       values[`${prefix}_SUBLABEL`] = presetText(preset.sublabels, lang).trim() || keep(`${prefix}_SUBLABEL`, lang)
     }
     if (fieldKeys.has(`${prefix}_LINK`) && preset.links) {
-      values[`${prefix}_LINK`] = presetText(preset.links, lang).trim() || keep(`${prefix}_LINK`, lang)
+      values[`${prefix}_LINK`] = presetLink(preset.links, lang).trim() || keep(`${prefix}_LINK`, lang)
     }
     out[lang] = values
   }
@@ -77,7 +78,7 @@ export function mergeLangPatches(
   return out
 }
 
-// Preset currently in a slot = same image + same label in every supported language
+// Preset currently in a slot = same (per-language) image + same label in every supported language
 export function activePresetId(
   presets: ThumbnailPreset[],
   slot: ThumbSlot,
@@ -89,7 +90,7 @@ export function activePresetId(
     presets.find(
       (p) =>
         p.kind === slot.kind &&
-        languages.every((lang) => values[lang]?.[`${slot.prefix}_IMG`] === p.imageUrl) &&
+        languages.every((lang) => values[lang]?.[`${slot.prefix}_IMG`] === presetImage(p, lang)) &&
         (!fieldKeys.has(`${slot.prefix}_LABEL`) ||
           languages.every((lang) => values[lang]?.[`${slot.prefix}_LABEL`] === presetText(p.labels, lang)))
     )?.id ?? ''

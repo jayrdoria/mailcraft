@@ -5,17 +5,21 @@ import { apiFetch } from '@/lib/apiFetch'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Loader2, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   PRESET_BRANDS,
   PRESET_BRAND_LABELS,
   PRESET_LANGUAGES,
+  hasFrca,
+  presetImageLanguages,
   type PresetBrand,
+  type PresetImages,
   type PresetKind,
   type PresetTexts,
   type ThumbnailPreset,
 } from '@/lib/types/thumbnailPreset'
+import type { Language } from '@/lib/types/template'
 
 const EMPTY: PresetTexts = { en: '', fr: '', de: '', it: '', es: '' }
 
@@ -23,10 +27,15 @@ interface PresetDraft {
   brand: PresetBrand
   kind: PresetKind
   imageUrl: string
+  imageUrls: PresetImages // per-language overrides, only sent while perLangImages is on
+  perLangImages: boolean
   labels: PresetTexts
   sublabels: PresetTexts
   links: PresetTexts
 }
+
+const isHttpUrl = (v: string) => /^https?:\/\/\S+$/i.test(v.trim())
+const hasImageOverrides = (images: PresetImages | null | undefined) => Object.values(images ?? {}).some((v) => (v ?? '').trim() !== '')
 
 const KIND_LABELS: Record<PresetKind, string> = { card: 'Cards', icon: 'Icons' }
 
@@ -50,6 +59,7 @@ function TextsGrid({
   onChange,
   type = 'text',
   maxLength,
+  frcaPlaceholder,
 }: {
   label: string
   hint?: string
@@ -57,7 +67,9 @@ function TextsGrid({
   onChange: (t: PresetTexts) => void
   type?: 'text' | 'url'
   maxLength: number
+  frcaPlaceholder?: string // set → an optional FRCA row after FR (Stakes)
 }) {
+  const langs: (keyof PresetTexts)[] = frcaPlaceholder !== undefined ? ['en', 'fr', 'frca', 'de', 'it', 'es'] : PRESET_LANGUAGES
   return (
     <div>
       <p className="text-xs font-medium mb-1">
@@ -65,15 +77,17 @@ function TextsGrid({
         {hint && <span className="ml-1 font-normal text-muted-foreground">{hint}</span>}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {PRESET_LANGUAGES.map((lang) => (
+        {langs.map((lang) => (
           <div key={lang} className="flex items-center gap-2">
-            <span className="w-6 text-[11px] font-semibold uppercase text-muted-foreground shrink-0">{lang}</span>
+            <span className={cn('text-[11px] font-semibold uppercase text-muted-foreground shrink-0', frcaPlaceholder !== undefined ? 'w-9' : 'w-6')}>{lang}</span>
             <input
               type={type}
-              value={texts[lang]}
+              value={texts[lang] ?? ''}
               onChange={(e) => onChange({ ...texts, [lang]: e.target.value })}
               maxLength={maxLength}
-              className="w-full px-3 py-1.5 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder={lang === 'frca' ? frcaPlaceholder : undefined}
+              aria-label={`${label} ${lang.toUpperCase()}`}
+              className="w-full px-3 py-1.5 text-sm rounded-md border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         ))}
@@ -97,7 +111,10 @@ function PresetForm({
 }) {
   const [d, setD] = useState<PresetDraft>(initial)
   const [imgError, setImgError] = useState(false)
-  const complete = /^https?:\/\/\S+$/i.test(d.imageUrl.trim()) && PRESET_LANGUAGES.every((l) => d.labels[l].trim().length > 0)
+  const frca = hasFrca(d.brand)
+  const imageLangs = presetImageLanguages(d.brand)
+  const overridesValid = !d.perLangImages || imageLangs.every((l) => !(d.imageUrls[l] ?? '').trim() || isHttpUrl(d.imageUrls[l] ?? ''))
+  const complete = isHttpUrl(d.imageUrl) && PRESET_LANGUAGES.every((l) => d.labels[l].trim().length > 0) && overridesValid
 
   return (
     <div className="rounded-xl border bg-card p-4 space-y-4">
@@ -155,13 +172,60 @@ function PresetForm({
           )}
         </div>
         {imgError && <p className="mt-1 text-[11px] text-muted-foreground">Image couldn&apos;t load — check the URL</p>}
+        {imageLangs.length > 0 && (
+          <label className="mt-2 inline-flex items-center gap-2 text-xs cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={d.perLangImages}
+              onChange={(e) => setD({ ...d, perLangImages: e.target.checked })}
+              className="h-3.5 w-3.5 cursor-pointer accent-primary"
+            />
+            Different image per language
+            <span className="text-muted-foreground">(for images with translated text)</span>
+          </label>
+        )}
+        {d.perLangImages && imageLangs.length > 0 && (
+          <div className="mt-2 space-y-2 rounded-md border bg-muted/20 p-3">
+            <p className="text-[11px] text-muted-foreground">EN and any empty language use the image above.</p>
+            {imageLangs.map((lang) => (
+              <ImageOverrideRow
+                key={lang}
+                lang={lang}
+                value={d.imageUrls[lang] ?? ''}
+                placeholder={lang === 'frca' ? 'Same as FR image' : 'Same as main image'}
+                onChange={(v) => setD({ ...d, imageUrls: { ...d.imageUrls, [lang]: v } })}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      <TextsGrid label="Label" texts={d.labels} onChange={(labels) => setD({ ...d, labels })} maxLength={100} />
+      <TextsGrid
+        label="Label"
+        texts={d.labels}
+        onChange={(labels) => setD({ ...d, labels })}
+        maxLength={100}
+        frcaPlaceholder={frca ? 'Same as FR' : undefined}
+      />
       {hasSublabel(d.brand, d.kind) && (
-        <TextsGrid label="Sublabel" hint="(optional)" texts={d.sublabels} onChange={(sublabels) => setD({ ...d, sublabels })} maxLength={100} />
+        <TextsGrid
+          label="Sublabel"
+          hint="(optional)"
+          texts={d.sublabels}
+          onChange={(sublabels) => setD({ ...d, sublabels })}
+          maxLength={100}
+          frcaPlaceholder={frca ? 'Same as FR' : undefined}
+        />
       )}
-      <TextsGrid label="Link" hint="(optional — empty keeps the template's link)" texts={d.links} onChange={(links) => setD({ ...d, links })} type="url" maxLength={2000} />
+      <TextsGrid
+        label="Link"
+        hint="(optional — empty keeps the template's link)"
+        texts={d.links}
+        onChange={(links) => setD({ ...d, links })}
+        type="url"
+        maxLength={2000}
+        frcaPlaceholder={frca ? 'Empty keeps the template’s FRCA link (FR link is not copied)' : undefined}
+      />
 
       <div className="flex justify-end gap-2">
         <button onClick={onCancel} className="px-3 py-1.5 text-xs rounded-md border hover:bg-accent cursor-pointer">
@@ -180,15 +244,61 @@ function PresetForm({
   )
 }
 
+// FRCA only for brands that have it; per-language images only while the toggle is on
+const withoutFrca = (t: PresetTexts): PresetTexts => ({ en: t.en, fr: t.fr, de: t.de, it: t.it, es: t.es })
 function toBody(d: PresetDraft) {
+  const texts = (t: PresetTexts) => (hasFrca(d.brand) ? t : withoutFrca(t))
+  const imageUrls = d.perLangImages
+    ? Object.fromEntries(
+        presetImageLanguages(d.brand)
+          .map((l) => [l, (d.imageUrls[l] ?? '').trim()])
+          .filter(([, v]) => v !== '')
+      )
+    : {}
   return {
     brand: d.brand,
     kind: d.kind,
     imageUrl: d.imageUrl.trim(),
-    labels: d.labels,
-    sublabels: hasSublabel(d.brand, d.kind) ? d.sublabels : null,
-    links: d.links,
+    imageUrls: Object.keys(imageUrls).length ? imageUrls : null,
+    labels: texts(d.labels),
+    sublabels: hasSublabel(d.brand, d.kind) ? texts(d.sublabels) : null,
+    links: texts(d.links),
   }
+}
+
+function ImageOverrideRow({
+  lang,
+  value,
+  placeholder,
+  onChange,
+}: {
+  lang: Language
+  value: string
+  placeholder: string
+  onChange: (v: string) => void
+}) {
+  const [failed, setFailed] = useState<string | null>(null)
+  const src = value.trim()
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-9 text-[11px] font-semibold uppercase text-muted-foreground shrink-0">{lang}</span>
+      <input
+        type="url"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={2000}
+        aria-label={`Image URL ${lang.toUpperCase()}`}
+        className="flex-1 min-w-0 px-3 py-1.5 text-sm rounded-md border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+      />
+      {src && failed !== src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" onError={() => setFailed(src)} className="h-8 w-12 rounded border object-contain bg-muted shrink-0" />
+      ) : (
+        <div className="h-8 w-12 shrink-0 rounded border border-dashed" title={src ? 'Image couldn’t load' : undefined} />
+      )}
+    </div>
+  )
 }
 
 export default function ThumbnailPresetsClient() {
@@ -255,6 +365,18 @@ export default function ThumbnailPresetsClient() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const duplicateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiFetch(`/api/thumbnail-presets/${id}/duplicate`, { method: 'POST' })
+      if (!res.ok) throw new Error(await readError(res, 'Failed to duplicate preset'))
+    },
+    onSuccess: () => {
+      refresh()
+      toast.success('Preset duplicated — rename the copy')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const reorderMutation = useMutation({
     mutationFn: async (body: { brand: PresetBrand; kind: PresetKind; ids: string[] }) => {
       const res = await apiFetch('/api/thumbnail-presets/reorder', {
@@ -268,7 +390,7 @@ export default function ThumbnailPresetsClient() {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const busy = reorderMutation.isPending || deleteMutation.isPending
+  const busy = reorderMutation.isPending || deleteMutation.isPending || duplicateMutation.isPending
 
   return (
     <div className="space-y-5">
@@ -323,7 +445,7 @@ export default function ThumbnailPresetsClient() {
 
               {adding === kind && (
                 <PresetForm
-                  initial={{ brand, kind, imageUrl: '', labels: EMPTY, sublabels: EMPTY, links: EMPTY }}
+                  initial={{ brand, kind, imageUrl: '', imageUrls: {}, perLangImages: false, labels: EMPTY, sublabels: EMPTY, links: EMPTY }}
                   submitLabel="Add Preset"
                   pending={createMutation.isPending}
                   onSubmit={(d) => createMutation.mutate(d)}
@@ -345,6 +467,8 @@ export default function ThumbnailPresetsClient() {
                             brand: p.brand,
                             kind: p.kind,
                             imageUrl: p.imageUrl,
+                            imageUrls: p.imageUrls ?? {},
+                            perLangImages: hasImageOverrides(p.imageUrls),
                             labels: p.labels,
                             sublabels: p.sublabels ?? EMPTY,
                             links: p.links ?? EMPTY,
@@ -371,8 +495,26 @@ export default function ThumbnailPresetsClient() {
                                 {p.labels[lang]}
                               </p>
                             ))}
+                            {hasFrca(p.brand) && p.labels.frca && (
+                              <p className="text-[11px] text-muted-foreground">
+                                <span className="font-semibold uppercase mr-1">frca</span>
+                                {p.labels.frca}
+                              </p>
+                            )}
                           </div>
                           {!p.links && <p className="mt-0.5 text-[11px] text-muted-foreground">No links — keeps the template&apos;s links</p>}
+                          {hasFrca(p.brand) && p.links && !p.links.frca && (
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">No FRCA link — keeps the template&apos;s FRCA link</p>
+                          )}
+                          {hasImageOverrides(p.imageUrls) && (
+                            <p className="mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              Per-language images ·{' '}
+                              {Object.entries(p.imageUrls ?? {})
+                                .filter(([, v]) => (v ?? '').trim())
+                                .map(([l]) => l.toUpperCase())
+                                .join(', ')}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-0.5 shrink-0">
                           <button
@@ -397,6 +539,14 @@ export default function ThumbnailPresetsClient() {
                             className="p-1.5 rounded-md hover:bg-accent text-muted-foreground cursor-pointer"
                           >
                             <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => duplicateMutation.mutate(p.id)}
+                            disabled={busy}
+                            title="Duplicate"
+                            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => {
