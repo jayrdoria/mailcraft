@@ -1,4 +1,5 @@
 import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { effectiveLockedFields } from '@/lib/masterLinks'
 import { requireScope, ownedWhere, scopeUserName } from '@/lib/services/accessService'
 import { toggleSectionSchema, deleteSectionSchema } from '@/lib/schemas'
 import { renderAndSaveAllLanguages, buildSectionTransformer } from '@/lib/services/renderService'
@@ -8,7 +9,6 @@ import { LANGUAGES } from '@/lib/types/template'
 import type {
   MultiLanguageFieldValues,
   SavedSectionConfig,
-  LockedFieldConfig,
   TemplateFieldConfig,
 } from '@/lib/types/template'
 import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
@@ -19,6 +19,7 @@ interface RouteContext {
 
 async function rerender(saved: {
   renderedBasePath: string | null
+  lockedFieldsSnapshot: unknown
   masterTemplate: {
     id: string
     brand: string
@@ -49,7 +50,7 @@ async function rerender(saved: {
           savedBaseFilePath: saved.renderedBasePath!,
           lang,
           brand: saved.masterTemplate.brand,
-          lockedFields: saved.masterTemplate.lockedFields as unknown as LockedFieldConfig[],
+          lockedFields: effectiveLockedFields(saved, saved.masterTemplate),
           editableFields: saved.masterTemplate.editableFields as unknown as TemplateFieldConfig[],
           fieldValues: saved.fieldValues as unknown as MultiLanguageFieldValues,
           sectionTransformer: transformer,

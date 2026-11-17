@@ -1,4 +1,5 @@
 import { apiError, apiSuccess, apiHandler, requireAdmin } from '@/lib/api'
+import { effectiveLockedFields } from '@/lib/masterLinks'
 import { renderTemplate, buildSectionTransformer } from '@/lib/services/renderService'
 import { prisma } from '@/lib/prisma'
 import { getScopeForUser, ownedWhere } from '@/lib/services/accessService'
@@ -6,7 +7,6 @@ import type {
   Language,
   MultiLanguageFieldValues,
   SavedSectionConfig,
-  LockedFieldConfig,
   TemplateFieldConfig,
 } from '@/lib/types/template'
 import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
@@ -46,7 +46,7 @@ export const GET = apiHandler(async (req, ctx) => {
       baseFilePath: master.baseFilePath,
       lang,
       brand: master.brand,
-      lockedFields: master.lockedFields as unknown as LockedFieldConfig[],
+      lockedFields: effectiveLockedFields(saved, master),
       editableFields: master.editableFields as unknown as TemplateFieldConfig[],
       fieldValues: saved.fieldValues as unknown as MultiLanguageFieldValues,
     })

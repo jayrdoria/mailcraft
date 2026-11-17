@@ -1,9 +1,11 @@
 import { apiError, apiSuccess, apiHandler, requireAuth } from '@/lib/api'
+import { currentLockedFields } from '@/lib/masterLinks'
 import { getMasterTemplateById } from '@/lib/services/templateService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { readTemplateHtml } from '@/lib/services/fileService'
-import type { LockedFieldConfig, Language } from '@/lib/types/template'
+import type { Language } from '@/lib/types/template'
 import { LANGUAGES } from '@/lib/types/template'
+import { lockedTokensFor } from '@/lib/lockedFields'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -53,12 +55,8 @@ export const GET = apiHandler(async (req, ctx) => {
   }
 
   // Inject locked fields (logos, CIO tokens, footer links)
-  const lockedFields = template.lockedFields as unknown as LockedFieldConfig[]
-  const lockedTokens: Record<string, string> = {}
-  for (const field of lockedFields) {
-    lockedTokens[field.key] = field.value
-  }
-  const previewHtml = injectTokens(masterHtml, lockedTokens)
+  const lockedFields = currentLockedFields(template)
+  const previewHtml = injectTokens(masterHtml, lockedTokensFor(lockedFields, lang))
 
   return apiSuccess({ html: previewHtml })
 })

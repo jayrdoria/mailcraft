@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs'
 import Redis from 'ioredis'
 import { X7_V2_SLUG, x7v2CreateData, x7v2UpdateData } from './templates/x7v2'
 import { withBannerTextFields } from './templates/bannerText'
+import { STAKES_LOGO1_VALUES } from './templates/lockedLinks'
+import { X7_V2_WL_SLUG, x7v2WhitelistCreateData, x7v2WhitelistUpdateData } from './templates/x7v2Whitelist'
 
 const prisma = new PrismaClient()
 const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379')
@@ -289,7 +291,7 @@ async function main() {
   ]
 
   const stakesJCLockedFields = [
-    { key: 'FOOTER_LOGO1_LINK', label: '18+ Logo Link',     value: 'https://stakes.com/responsible-gaming', note: 'Responsible gaming 18+ logo href',  isReadOnly: false },
+    { key: 'FOOTER_LOGO1_LINK', label: '18+ Logo Link',     value: 'https://stakes.com/responsible-gaming', values: STAKES_LOGO1_VALUES, note: 'Responsible gaming 18+ logo href',  isReadOnly: false },
     { key: 'FOOTER_LOGO2_LINK', label: 'GamCare Logo Link', value: 'https://www.gamcare.org.uk',           note: 'GamCare responsible gaming logo href', isReadOnly: false },
   ]
 
@@ -617,6 +619,14 @@ async function main() {
     create: x7v2CreateData(templateBaseDir),
   })
   console.log(`✓ X7 Casino V2 Template: ${x7v2JC.id}`)
+
+  // ── X7 Casino V2 Whitelist — same as V2, x7casino.io links (prisma/templates/x7v2Whitelist.ts) ──
+  const x7v2WL = await prisma.masterTemplate.upsert({
+    where: { slug: X7_V2_WL_SLUG },
+    update: x7v2WhitelistUpdateData(templateBaseDir),
+    create: x7v2WhitelistCreateData(templateBaseDir),
+  })
+  console.log(`✓ X7 Casino V2 Whitelist Template: ${x7v2WL.id}`)
 
   // Flush all mailcraft Redis caches so stale IDs never survive a reseed
   const keys = await redis.keys('mailcraft:*')

@@ -46,6 +46,8 @@ export interface LockedFieldConfig {
   key: string
   label: string
   value: string
+  // Optional per-language override of `value` (e.g. FR/IT → stakes3.com). Missing lang = `value`.
+  values?: Partial<Record<Language, string>>
   note?: string
   // true = CIO system token (read-only even for admin, displayed as code chip)
   // false = static value admin can update (logo URLs, footer links, etc.)

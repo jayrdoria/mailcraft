@@ -1,14 +1,15 @@
 import { auth } from '@/lib/auth'
+import { effectiveLockedFields } from '@/lib/masterLinks'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { readTemplateHtml } from '@/lib/services/fileService'
 import { getMasterHtmlByLang } from '@/lib/services/masterPreviewService'
+import { injectLockedFields } from '@/lib/lockedFields'
 import EditorClient from '@/components/editor/EditorClient'
 import { getScope, readableTemplateWhere, isOwnedBy } from '@/lib/services/accessService'
 import type {
   TemplateFieldConfig,
-  LockedFieldConfig,
   MultiLanguageFieldValues,
   SavedSectionConfig,
   Language,
@@ -27,15 +28,6 @@ export async function generateMetadata({ params }: EditorPageProps) {
     select: { name: true },
   })
   return { title: `${saved?.name ?? 'Edit'} — MailCraft` }
-}
-
-function injectLockedFields(html: string, lockedFields: LockedFieldConfig[]): string {
-  let result = html
-  for (const field of lockedFields) {
-    const escaped = field.key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    result = result.replace(new RegExp(`\\{\\{${escaped}\\}\\}`, 'g'), field.value)
-  }
-  return result
 }
 
 export default async function EditorPage({ params }: EditorPageProps) {
@@ -58,7 +50,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
   const isOwner = isOwnedBy(scope, saved) || scope.isAdmin
   const templateFolderId = (saved as unknown as { folderId?: string | null }).folderId ?? null
   const editableFields = saved.masterTemplate.editableFields as unknown as TemplateFieldConfig[]
-  const lockedFields = saved.masterTemplate.lockedFields as unknown as LockedFieldConfig[]
+  const lockedFields = effectiveLockedFields(saved, saved.masterTemplate)
   const fieldValues = saved.fieldValues as unknown as MultiLanguageFieldValues
   const sectionConfig = saved.sectionConfig as unknown as SavedSectionConfig[]
   const customBlocks = (saved.customBlocks as unknown as CustomBlock[] | null) ?? null
@@ -82,7 +74,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
       rawHtml = await readTemplateHtml(saved.masterTemplate.baseFilePath, 'en')
       redis.set(cacheKey, rawHtml, 'EX', CacheTTL.masterTemplateHtml).catch(() => {})
     }
-    masterPreviewHtml = injectLockedFields(rawHtml, lockedFields)
+    masterPreviewHtml = injectLockedFields(rawHtml, lockedFields, 'en')
   } catch {
     // HTML file not found
   }
@@ -96,7 +88,7 @@ export default async function EditorPage({ params }: EditorPageProps) {
   )
   const masterPreviewHtmlByLang: Partial<Record<Language, string>> = {}
   for (const [lang, html] of Object.entries(rawHtmlByLang)) {
-    masterPreviewHtmlByLang[lang as Language] = injectLockedFields(html, lockedFields)
+    masterPreviewHtmlByLang[lang as Language] = injectLockedFields(html, lockedFields, lang as Language)
   }
 
   return (

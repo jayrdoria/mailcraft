@@ -32,6 +32,7 @@ export const lockedFieldConfigSchema = z.object({
   key:        z.string().regex(/^[A-Z_]+$/, 'Key must be uppercase with underscores'),
   label:      z.string().min(1),
   value:      z.string(),
+  values:     z.record(languageSchema, z.string()).optional(),
   note:       z.string().optional(),
   isReadOnly: z.boolean(),
 })
@@ -297,3 +298,31 @@ export const reorderThumbnailPresetsSchema = z.object({
   kind: z.enum(['card', 'icon']),
   ids: z.array(z.string().min(1)).min(1).max(500),
 })
+
+// ─────────────────────────────────────────────
+// ADMIN → LINKS (master template links; reach new templates only)
+// ─────────────────────────────────────────────
+
+const linkSlotIdSchema = z.string().regex(/^(editable|locked):[A-Z0-9_]+:(en|fr|frca|de|it|es):\d{1,3}$/, 'Invalid link id')
+
+export const updateMasterLinksSchema = z
+  .object({
+    expectedUpdatedAt: z.string().datetime(),
+    edits: z
+      .array(
+        z.object({
+          id: linkSlotIdSchema,
+          from: z.string().max(2000),
+          to: z.string().trim().min(1, 'Link cannot be empty').max(2000),
+        })
+      )
+      .max(500)
+      .default([]),
+    bulk: z
+      .object({
+        find: z.string().trim().min(3, 'Find text must be at least 3 characters').max(500),
+        replace: z.string().trim().max(500),
+      })
+      .optional(),
+  })
+  .refine((d) => d.edits.length > 0 || d.bulk, { message: 'Nothing to change' })

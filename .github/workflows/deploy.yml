@@ -82,10 +82,19 @@ jobs:
             ls -1t "$BACKUP_DIR"/pre-deploy-*.dump | tail -n +3 | xargs -r rm --
             echo "DB backup saved: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
 
-            git pull
-
             docker pull ghcr.io/jayrdoria/mailcraft:latest
             docker pull ghcr.io/jayrdoria/mailcraft:migrate
+
+            # Per-language locked footer links (add-only; Stakes FR/IT 18+ → stakes3.com, X7 V2 18+ token).
+            # Runs BEFORE git pull so the DB has FOOTER_LOGO2_LINK before the new V2 master HTML that uses it.
+            docker run --rm \
+              --network mailcraft_default \
+              --env-file .env \
+              -e REDIS_URL=redis://redis:6379 \
+              ghcr.io/jayrdoria/mailcraft:migrate \
+              npx tsx prisma/seed-locked-links.ts
+
+            git pull
 
             docker run --rm \
               --network mailcraft_default \
@@ -103,6 +112,15 @@ jobs:
               ghcr.io/jayrdoria/mailcraft:migrate \
               npx tsx prisma/seed-x7v2.ts \
               || echo "WARNING: X7 Casino V2 registration failed — app is deployed; check the log above"
+
+            # X7 Casino V2 Whitelist (create-only — same as V2 with x7casino.io links; skips if present)
+            docker run --rm \
+              --network mailcraft_default \
+              --env-file .env \
+              -e REDIS_URL=redis://redis:6379 \
+              ghcr.io/jayrdoria/mailcraft:migrate \
+              npx tsx prisma/seed-x7v2-whitelist.ts \
+              || echo "WARNING: X7 Casino V2 Whitelist registration failed — app is deployed; check the log above"
 
             # Banner text box fields (add-only — appends BANNER_TITLE/BANNER_SUB to the
             # built-in masters if missing; never touches saved templates). Also clears the

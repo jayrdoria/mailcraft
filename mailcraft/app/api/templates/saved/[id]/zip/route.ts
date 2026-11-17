@@ -1,4 +1,5 @@
 import { apiError, apiHandler } from '@/lib/api'
+import { effectiveLockedFields } from '@/lib/masterLinks'
 import { requireScope, readableTemplateWhere, scopeUserName } from '@/lib/services/accessService'
 import { renderTemplate, buildSectionTransformer } from '@/lib/services/renderService'
 import { cleanHtml } from '@/lib/services/sectionService'
@@ -8,7 +9,6 @@ import { LANGUAGES } from '@/lib/types/template'
 import type {
   MultiLanguageFieldValues,
   SavedSectionConfig,
-  LockedFieldConfig,
   TemplateFieldConfig,
   Language,
 } from '@/lib/types/template'
@@ -60,7 +60,7 @@ export const GET = apiHandler(async (_req, ctx) => {
         baseFilePath: master.baseFilePath,
         lang,
         brand: master.brand,
-        lockedFields: master.lockedFields as unknown as LockedFieldConfig[],
+        lockedFields: effectiveLockedFields(saved, master),
         editableFields: master.editableFields as unknown as TemplateFieldConfig[],
         fieldValues: saved.fieldValues as unknown as MultiLanguageFieldValues,
       })

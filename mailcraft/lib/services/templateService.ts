@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import type { MultiLanguageFieldValues, SavedSectionConfig } from '@/lib/types/template'
+import type { LockedFieldConfig, MultiLanguageFieldValues, SavedSectionConfig } from '@/lib/types/template'
 import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import { getSavedTemplatePath } from '@/lib/services/fileService'
 import { redis, CacheKeys } from '@/lib/redis'
@@ -56,6 +56,8 @@ export async function createSavedTemplate(params: {
   userId: string
   masterTemplateId: string
   name: string
+  /** Master's current locked links, kept for life (see lib/masterLinks.ts) */
+  lockedFieldsSnapshot?: LockedFieldConfig[]
   fieldValues: MultiLanguageFieldValues
   sectionConfig: SavedSectionConfig[]
   customBlocks?: CustomBlock[]
@@ -64,7 +66,7 @@ export async function createSavedTemplate(params: {
   /** Owning department key (null = personal) — see accessService.ownershipData */
   department?: string | null
 }) {
-  const { userId, masterTemplateId, name, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId, department } = params
+  const { userId, masterTemplateId, name, lockedFieldsSnapshot, fieldValues, sectionConfig, customBlocks, layoutOrder, folderId, department } = params
 
   const saved = await prisma.savedTemplate.create({
     data: {
@@ -73,6 +75,7 @@ export async function createSavedTemplate(params: {
       lastEditedById: userId,
       masterTemplateId,
       name,
+      ...(lockedFieldsSnapshot !== undefined ? { lockedFieldsSnapshot: lockedFieldsSnapshot as object } : {}),
       fieldValues: fieldValues as object,
       sectionConfig: sectionConfig as object,
       ...(customBlocks !== undefined ? { customBlocks: customBlocks as object } : {}),

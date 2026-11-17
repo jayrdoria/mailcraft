@@ -7,10 +7,10 @@ import { join } from 'node:path'
 import { prisma } from '@/lib/prisma'
 import { activePresetId, mergeLangPatches, presetSlotValues, slotsFromFields } from '@/lib/thumbnailSlots'
 import { renderTemplate } from '@/lib/services/renderService'
+import { effectiveLockedFields } from '@/lib/masterLinks'
 import type {
   FieldValue,
   Language,
-  LockedFieldConfig,
   MultiLanguageFieldValues,
   TemplateFieldConfig,
 } from '@/lib/types/template'
@@ -81,6 +81,8 @@ async function main() {
   const fills: Record<string, LangVals> = {}
   const active: Record<string, string> = {}
   const renders: Record<string, string> = {}
+  // 2026-11-17: every href in each master's default render, readable (link-admin ticket)
+  const links: Record<string, string[]> = {}
   let renderCount = 0
 
   for (const m of masters) {
@@ -105,11 +107,13 @@ async function main() {
           baseFilePath: m.baseFilePath,
           lang,
           brand: m.brand,
-          lockedFields: m.lockedFields as unknown as LockedFieldConfig[],
+          // 2026-11-17: through the saved-template path, as a pre-snapshot (legacy) template
+          lockedFields: effectiveLockedFields({ lockedFieldsSnapshot: null }, m),
           editableFields: fields,
           fieldValues: vals as unknown as MultiLanguageFieldValues,
         })
         renders[key] = sha(html)
+        if (tag === 'defaults') links[key] = [...new Set([...html.matchAll(/href="([^"]*)"/g)].map((x) => x[1]))].sort()
         renderCount++
       }
     }
@@ -132,6 +136,7 @@ async function main() {
   writeFileSync(join(out, 'fills.json'), JSON.stringify(fills, null, 1))
   writeFileSync(join(out, 'active.json'), JSON.stringify(active, null, 1))
   writeFileSync(join(out, 'renders.json'), JSON.stringify(renders, null, 1))
+  writeFileSync(join(out, 'links.json'), JSON.stringify(links, null, 1))
   console.log(
     `logic: rows ${rows.length} · masters ${masters.length} · presets ${presets.length} · fills ${Object.keys(fills).length} · active ${Object.keys(active).length} · renders ${renderCount}`
   )

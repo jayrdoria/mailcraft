@@ -1,4 +1,5 @@
 import { apiError, apiSuccess, apiHandler } from '@/lib/api'
+import { currentLockedFields } from '@/lib/masterLinks'
 import { requireScope, ownedWhere, isOwnedBy, ownershipData, scopeUserName } from '@/lib/services/accessService'
 import { createSavedTemplateSchema } from '@/lib/schemas'
 import { getMasterTemplateById, createSavedTemplate } from '@/lib/services/templateService'
@@ -9,7 +10,6 @@ import { LANGUAGES } from '@/lib/types/template'
 import type {
   MultiLanguageFieldValues,
   SavedSectionConfig,
-  LockedFieldConfig,
   TemplateFieldConfig,
   Language,
 } from '@/lib/types/template'
@@ -145,10 +145,14 @@ export const POST = apiHandler(async (req) => {
     }
   }
 
+  // Links this template keeps for life — later Admin → Links edits only reach newer templates
+  const lockedFieldsSnapshot = currentLockedFields(master)
+
   const saved = await createSavedTemplate({
     ...ownershipData(scope),
     masterTemplateId,
     name,
+    lockedFieldsSnapshot,
     fieldValues: initialFieldValues,
     sectionConfig: sectionConfig as SavedSectionConfig[],
     customBlocks,
@@ -175,7 +179,7 @@ export const POST = apiHandler(async (req) => {
             savedBaseFilePath: saved.renderedBasePath!,
             lang,
             brand: master.brand,
-            lockedFields: master.lockedFields as unknown as LockedFieldConfig[],
+            lockedFields: lockedFieldsSnapshot,
             editableFields,
             fieldValues: saved.fieldValues as unknown as MultiLanguageFieldValues,
             sectionTransformer: transformer,

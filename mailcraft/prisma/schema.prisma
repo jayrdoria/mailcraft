@@ -41,6 +41,7 @@ enum ActivityAction {
   SECTION_DELETED
   ACCOUNT_CREATED
   ACCOUNT_DEACTIVATED
+  MASTER_LINKS_UPDATED
 }
 
 // ─────────────────────────────────────────────
@@ -95,8 +96,17 @@ model MasterTemplate {
   // JSON: TemplateFieldConfig[] — editable fields shown in editor
   editableFields Json
 
-  // JSON: LockedFieldConfig[] — never shown to users, injected at render time
+  // JSON: LockedFieldConfig[] — never shown to users, injected at render time.
+  // Baseline: used by saved templates created before link snapshots existed (lockedFieldsSnapshot NULL).
   lockedFields Json @default("[]")
+
+  // JSON: LockedFieldConfig[] — current locked links set through Admin → Links. NULL = same as lockedFields.
+  // Copied into every NEW saved template (lockedFieldsSnapshot); never re-applied to existing ones.
+  currentLockedFields Json?
+
+  // JSON: { [fieldKey]: { [lang | "*"]: string[] } } — previous editable defaults replaced through
+  // Admin → Links. A duplicate whose value still equals one of these gets the current default.
+  linkHistory Json?
 
   // JSON: Language[] — which language HTML files exist for this template
   // Controls language tabs in editor and which files to render/export
@@ -140,6 +150,10 @@ model SavedTemplate {
   // JSON: LayoutItem[] — interleaved order of master sections + custom blocks.
   // Null = legacy order: master sections in source order, no blocks.
   layoutOrder Json?
+
+  // JSON: LockedFieldConfig[] — the master's locked links when this template was created / duplicated.
+  // NULL = created before snapshots existed → master.lockedFields (baseline).
+  lockedFieldsSnapshot Json?
 
   // Base directory for rendered output files on VPS
   renderedBasePath String?

@@ -4,6 +4,7 @@
 
 import { withBannerTextFields } from './bannerText'
 import { withV2LayoutFields } from './x7v2Layouts'
+import { X7V2_LOGO2_LINK } from './lockedLinks'
 
 export const X7_V2_SLUG = 'x7-casino-v2-template'
 export const X7_V2_LANGUAGES = ['en', 'fr', 'de', 'it', 'es']
@@ -229,11 +230,11 @@ export const x7v2EditableFields = [
   },
 ]
 
-// The 18+ logo link is per-language in V2, so it stays hardcoded in each {lang}.html
-// (locked fields are single-value across languages).
+// The 18+ logo link is per-language (locked `values`) — {{FOOTER_LOGO2_LINK}} in each {lang}.html.
 export const x7v2LockedFields = [
   { key: 'FOOTER_LOGO1_LINK', label: 'Play Responsibly Logo Link', value: 'https://gamingcommission.ca/interactive-gaming/players/#plLE', note: 'Play Responsibly logo href',           isReadOnly: false },
   { key: 'FOOTER_LOGO3_LINK', label: 'Kahnawake Logo Link',        value: 'https://gamingcommission.ca/interactive-gaming/players/#plLE', note: 'Kahnawake Gaming Commission logo href', isReadOnly: false },
+  X7V2_LOGO2_LINK,
 ]
 
 // Fields refreshed on every upsert (mirrors the update block of the other master templates)

@@ -118,5 +118,84 @@ try {
   await sweep() // anything a failed delete left behind
   rec('get-all-after', await call('GET', ''))
 }
+// ── 2026-11-17: Admin → Links (links-* cases) on the X7 V2 Whitelist master (backed up by prepare-api,
+// restored by restore-api). Proves: admin-only, validation, stale writes, and that edits reach NEW templates
+// + duplicates while an existing template keeps its links. Temp saved templates are always deleted.
+const WL = readFileSync(`${COOKIES}/links-master-id.txt`, 'utf8').trim()
+ids.set(WL, 'ID_WL')
+const LINKS = `${ORIGIN}/api/admin/master-templates/${WL}/links`
+const SAVED = `${ORIGIN}/api/templates/saved`
+const at = async (method, url, { who = 'admin', body } = {}) => {
+  const res = await fetch(url, {
+    method,
+    headers: { ...(who ? { cookie: ck(who) } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+    redirect: 'manual',
+  })
+  const text = await res.text()
+  let json = null
+  try { json = JSON.parse(text) } catch {}
+  return { status: res.status, json, text }
+}
+const status = (r) => ({ status: r.status, error: r.json?.error ?? null, message: r.json?.message ?? null })
+const tempSaved = []
+const html = async (id, lang = 'en') => (await at('GET', `${SAVED}/${id}/html?lang=${lang}`)).text
+const clone = async (name) => {
+  const r = await at('POST', SAVED, { body: { name, masterTemplateId: WL } })
+  if (r.json?.data?.id) tempSaved.push(r.json.data.id)
+  return r
+}
+try {
+  const g = await at('GET', LINKS)
+  rec('links-get', { status: g.status, data: g.json?.data })
+  rec('links-get-anon', status(await at('GET', LINKS, { who: null })))
+  rec('links-get-dept', status(await at('GET', LINKS, { who: 'dept' })))
+  rec('links-get-missing', status(await at('GET', `${ORIGIN}/api/admin/master-templates/does-not-exist/links`)))
+  const v = g.json?.data
+  const slot = (id) => v?.links?.find((l) => l.id === id)
+  const logoEn = slot('editable:LOGO_LINK:en:0')
+  const put = (body, who) => at('PUT', LINKS, { who, body: { expectedUpdatedAt: v?.updatedAt, ...body } })
+  const edit = (to, from = logoEn?.url) => ({ edits: [{ id: 'editable:LOGO_LINK:en:0', from, to }] })
+
+  rec('links-put-dept', status(await put(edit('https://x7casino.io/regress'), 'dept')))
+  rec('links-put-empty', status(await put({})))
+  rec('links-put-js', status(await put(edit('javascript:alert(1)'))))
+  rec('links-put-quote', status(await put(edit('https://x7casino.io/" onmouseover="x'))))
+  rec('links-put-bad-id', status(await put({ edits: [{ id: 'editable:NOPE:en:0', from: 'a', to: 'https://a.com' }] })))
+  rec('links-put-stale-from', status(await put(edit('https://x7casino.io/regress', 'https://not-what-it-was.example'))))
+  rec('links-put-stale-master', status(await at('PUT', LINKS, { body: { expectedUpdatedAt: '2000-01-01T00:00:00.000Z', ...edit('https://x7casino.io/regress') } })))
+  rec('links-put-short-find', status(await put({ bulk: { find: 'x7', replace: 'y7' } })))
+
+  // An existing template (created before the edit) …
+  const old = await clone('regress-links-old')
+  rec('links-clone-old', status(old))
+  const oldId = old.json?.data?.id
+  const oldBefore = oldId ? await html(oldId, 'de') : ''
+
+  // … then the admin bulk-replaces the domain
+  const bulk = await put({ bulk: { find: 'x7casino.io', replace: 'x7regress.io' } })
+  rec('links-put-bulk', { ...status(bulk), changed: bulk.json?.data?.changed, x7casinoLeft: (bulk.json?.data?.links ?? []).filter((l) => l.url.includes('x7casino.io')).length })
+  const v2 = bulk.json?.data
+  rec('links-put-noop', status(await at('PUT', LINKS, { body: { expectedUpdatedAt: v2?.updatedAt, bulk: { find: 'not-in-any-link', replace: 'x' } } })))
+
+  // Existing template unchanged; a new clone and a duplicate of the old one get the new links (D6/D7)
+  const oldAfter = oldId ? await html(oldId, 'de') : ''
+  const fresh = await clone('regress-links-new')
+  rec('links-clone-new', status(fresh))
+  const freshHtml = fresh.json?.data?.id ? await html(fresh.json.data.id, 'de') : ''
+  const dup = oldId ? await at('POST', `${SAVED}/${oldId}/duplicate`) : null
+  if (dup?.json?.data?.id) tempSaved.push(dup.json.data.id)
+  const dupHtml = dup?.json?.data?.id ? await html(dup.json.data.id, 'de') : ''
+  rec('links-effect', {
+    oldUnchanged: oldBefore !== '' && oldBefore === oldAfter,
+    oldKeepsOldDomain: oldAfter.includes('x7casino.io') && !oldAfter.includes('x7regress.io'),
+    newGetsNewDomain: freshHtml.includes('x7regress.io') && !freshHtml.includes('x7casino.io'),
+    duplicateGetsNewDomain: dupHtml.includes('x7regress.io') && !dupHtml.includes('x7casino.io'),
+  })
+} finally {
+  for (const id of tempSaved) await at('DELETE', `${SAVED}/${id}`)
+  rec('links-temp-deleted', { count: tempSaved.length })
+}
+
 writeFileSync(outFile, JSON.stringify(results, null, 1))
 console.log(`api: cases ${Object.keys(results).length}`)

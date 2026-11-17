@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<string, string> = {
   SECTION_DELETED: 'Section Deleted',
   ACCOUNT_CREATED: 'Account Created',
   ACCOUNT_DEACTIVATED: 'Account Deactivated',
+  MASTER_LINKS_UPDATED: 'Master Links Updated',
 }
 
 const ACTION_COLORS: Record<string, string> = {
@@ -26,6 +27,7 @@ const ACTION_COLORS: Record<string, string> = {
   SECTION_DELETED: 'bg-orange-500/15 text-orange-400',
   ACCOUNT_CREATED: 'bg-emerald-500/15 text-emerald-400',
   ACCOUNT_DEACTIVATED: 'bg-gray-500/15 text-gray-400',
+  MASTER_LINKS_UPDATED: 'bg-sky-500/15 text-sky-400',
 }
 
 interface LogEntry {

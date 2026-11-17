@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { effectiveLockedFields } from '@/lib/masterLinks'
 import type { Prisma } from '@prisma/client'
 import { apiError, apiSuccess, apiHandler } from '@/lib/api'
 import { requireScope, ownedWhere, readableTemplateWhere, scopeUserName } from '@/lib/services/accessService'
@@ -11,7 +12,6 @@ import { LANGUAGES } from '@/lib/types/template'
 import type {
   MultiLanguageFieldValues,
   SavedSectionConfig,
-  LockedFieldConfig,
   TemplateFieldConfig,
 } from '@/lib/types/template'
 import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
@@ -138,7 +138,7 @@ export const PATCH = apiHandler(async (req, ctx) => {
             savedBaseFilePath: updated.renderedBasePath!,
             lang,
             brand: master.brand,
-            lockedFields: master.lockedFields as unknown as LockedFieldConfig[],
+            lockedFields: effectiveLockedFields(updated, master),
             editableFields: master.editableFields as unknown as TemplateFieldConfig[],
             fieldValues: updated.fieldValues as unknown as MultiLanguageFieldValues,
             sectionTransformer: transformer,

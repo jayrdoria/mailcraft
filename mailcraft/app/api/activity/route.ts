@@ -7,7 +7,7 @@ const DEFAULT_PAGE_SIZE = 50
 const VALID_ACTIONS = new Set([
   'TEMPLATE_CLONED', 'TEMPLATE_SAVED', 'TEMPLATE_DELETED',
   'HTML_COPIED', 'HTML_DOWNLOADED', 'SECTION_DELETED',
-  'ACCOUNT_CREATED', 'ACCOUNT_DEACTIVATED',
+  'ACCOUNT_CREATED', 'ACCOUNT_DEACTIVATED', 'MASTER_LINKS_UPDATED',
 ])
 
 // GET /api/activity — activity logs (admin: all, department account: whole department, else own)

@@ -5,7 +5,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 const [base, after, ...allow] = process.argv.slice(2)
 const allowRe = allow.map((a) => new RegExp(a))
-const FILES = ['logic/db.json', 'logic/rows.json', 'logic/fills.json', 'logic/active.json', 'logic/renders.json', 'api.json']
+const FILES = ['logic/db.json', 'logic/rows.json', 'logic/fills.json', 'logic/active.json', 'logic/renders.json', 'logic/links.json', 'api.json']
 const NEW_NULLABLE = new Set(['imageUrls'])
 let regress = 0, allowed = 0
 const out = (path, a, b) => {

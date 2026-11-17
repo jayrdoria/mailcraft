@@ -1,13 +1,14 @@
 import { auth } from '@/lib/auth'
+import { currentLockedFields } from '@/lib/masterLinks'
 import { redirect } from 'next/navigation'
 import { getMasterTemplateById } from '@/lib/services/templateService'
 import { redis, CacheKeys, CacheTTL } from '@/lib/redis'
 import { readTemplateHtml } from '@/lib/services/fileService'
 import { getMasterHtmlByLang } from '@/lib/services/masterPreviewService'
+import { injectLockedFields } from '@/lib/lockedFields'
 import EditorClient from '@/components/editor/EditorClient'
 import type {
   TemplateFieldConfig,
-  LockedFieldConfig,
   MultiLanguageFieldValues,
   SavedSectionConfig,
   Language,
@@ -22,15 +23,6 @@ interface NewEditorPageProps {
   searchParams: Promise<{ master?: string; folder?: string }>
 }
 
-function injectLockedFields(html: string, lockedFields: LockedFieldConfig[]): string {
-  let result = html
-  for (const field of lockedFields) {
-    const escaped = field.key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    result = result.replace(new RegExp(`\\{\\{${escaped}\\}\\}`, 'g'), field.value)
-  }
-  return result
-}
-
 export default async function NewEditorPage({ searchParams }: NewEditorPageProps) {
   const session = await auth()
   if (!session) redirect('/login')
@@ -42,7 +34,7 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
   if (!masterTemplate || !masterTemplate.isActive) redirect('/templates')
 
   const editableFields = masterTemplate.editableFields as unknown as TemplateFieldConfig[]
-  const lockedFields = masterTemplate.lockedFields as unknown as LockedFieldConfig[]
+  const lockedFields = currentLockedFields(masterTemplate)
 
   const masterRaw = masterTemplate as unknown as { languages?: unknown; isImported?: boolean }
   const masterLanguages = (masterRaw.languages as Language[]) ?? []
@@ -81,7 +73,7 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
       rawHtml = await readTemplateHtml(masterTemplate.baseFilePath, 'en')
       redis.set(cacheKey, rawHtml, 'EX', CacheTTL.masterTemplateHtml).catch(() => {})
     }
-    masterPreviewHtml = injectLockedFields(rawHtml, lockedFields)
+    masterPreviewHtml = injectLockedFields(rawHtml, lockedFields, 'en')
   } catch {
     // HTML file not found
   }
@@ -95,7 +87,7 @@ export default async function NewEditorPage({ searchParams }: NewEditorPageProps
   )
   const masterPreviewHtmlByLang: Partial<Record<Language, string>> = {}
   for (const [lang, html] of Object.entries(rawHtmlByLang)) {
-    masterPreviewHtmlByLang[lang as Language] = injectLockedFields(html, lockedFields)
+    masterPreviewHtmlByLang[lang as Language] = injectLockedFields(html, lockedFields, lang as Language)
   }
 
   const brandLabel =

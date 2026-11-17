@@ -3,6 +3,8 @@ import { requireScope, ownedWhere, ownershipData, scopeUserName } from '@/lib/se
 import { prisma } from '@/lib/prisma'
 import { getSavedTemplatePath } from '@/lib/services/fileService'
 import * as activityService from '@/lib/services/activityService'
+import { currentLockedFields, refreshStaleDefaults, type LinkHistory } from '@/lib/masterLinks'
+import type { MultiLanguageFieldValues, TemplateFieldConfig } from '@/lib/types/template'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -17,7 +19,11 @@ export const POST = apiHandler(async (_req, ctx) => {
 
   const source = await prisma.savedTemplate.findFirst({
     where: { id, ...ownedWhere(scope) },
-    include: { masterTemplate: { select: { name: true } } },
+    include: {
+      masterTemplate: {
+        select: { name: true, lockedFields: true, currentLockedFields: true, editableFields: true, linkHistory: true },
+      },
+    },
   })
   if (!source) return apiError('Template not found', 404)
 
@@ -35,13 +41,23 @@ export const POST = apiHandler(async (_req, ctx) => {
     counter++
   }
 
+  // The copy takes the master's CURRENT links (D6): locked links + any value still on a default that
+  // Admin → Links has since replaced (D7). Links the user typed themselves are kept as they are.
+  const master = source.masterTemplate
+  const fieldValues = refreshStaleDefaults(
+    (source.fieldValues ?? {}) as unknown as MultiLanguageFieldValues,
+    (master.editableFields ?? []) as unknown as TemplateFieldConfig[],
+    master.linkHistory as unknown as LinkHistory | null
+  )
+
   const copy = await prisma.savedTemplate.create({
     data: {
       ...ownershipData(scope),
       lastEditedById: scope.userId,
       masterTemplateId: source.masterTemplateId,
       name: candidateName,
-      fieldValues: source.fieldValues ?? {},
+      lockedFieldsSnapshot: currentLockedFields(master) as object,
+      fieldValues: fieldValues as object,
       sectionConfig: source.sectionConfig ?? [],
       // Keep MailCraft Blocks + their order; null (legacy) stays null via the column default
       ...(source.customBlocks !== null ? { customBlocks: source.customBlocks } : {}),

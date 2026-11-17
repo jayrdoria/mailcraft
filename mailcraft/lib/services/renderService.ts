@@ -17,6 +17,7 @@ import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRendere
 import { escapeHtml, sanitizeUrl } from '@/lib/utils/escapeHtml'
 import { applyBannerText } from '@/lib/bannerText'
 import { applyV2Layouts } from '@/lib/v2Layouts'
+import { lockedTokensFor } from '@/lib/lockedFields'
 
 // ─────────────────────────────────────────────
 // Section config transformer
@@ -180,12 +181,8 @@ export async function renderTemplate(params: {
 
   const masterHtml = await getMasterHtml(masterTemplateId, baseFilePath, lang)
 
-  // Pass 1: inject locked fields (all strings, brand irrelevant here)
-  const lockedTokens: Record<string, string> = {}
-  for (const field of lockedFields) {
-    lockedTokens[field.key] = field.value
-  }
-  let html = injectTokens(masterHtml, lockedTokens)
+  // Pass 1: inject locked fields (all strings, brand irrelevant here; per-language overrides applied)
+  let html = injectTokens(masterHtml, lockedTokensFor(lockedFields, lang))
 
   // Pass 2: inject user's editable field values for this language (sanitized by field type)
   const langValues = fieldValues[lang] ?? {}

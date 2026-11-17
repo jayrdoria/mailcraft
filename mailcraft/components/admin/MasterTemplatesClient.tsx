@@ -4,7 +4,8 @@ import { useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/lib/gsap'
-import { Mail } from 'lucide-react'
+import Link from 'next/link'
+import { Link2, Mail } from 'lucide-react'
 import { apiFetch } from '@/lib/apiFetch'
 import { cn } from '@/lib/utils'
 import { BRAND_LABELS } from '@/lib/types/template'
@@ -134,6 +135,12 @@ export default function MasterTemplatesClient() {
                     <p className="text-[10px] text-muted-foreground font-mono mt-1.5 truncate">{t.slug}</p>
                   </div>
 
+                  <Link
+                    href={`/admin/master-templates/${t.id}/links`}
+                    className="self-start inline-flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md border hover:bg-accent transition-colors cursor-pointer"
+                  >
+                    <Link2 className="w-3.5 h-3.5" /> Links
+                  </Link>
                 </div>
               </div>
             )

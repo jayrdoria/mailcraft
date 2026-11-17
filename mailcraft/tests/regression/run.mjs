@@ -83,6 +83,7 @@ async function snapshot(dir) {
   if (layers.includes('logic')) {
     tsx('tests/regression/snapshot-logic.ts', join(dir, 'logic'))
     tsx('tests/regression/assert-presets.ts')
+    tsx('tests/regression/assert-links.ts')
   }
   if (layers.includes('api')) {
     await checkServer()
@@ -93,7 +94,9 @@ async function snapshot(dir) {
     if (!probe || probe.status >= 500) {
       fail(`${ORIGIN}/api/thumbnail-presets → ${probe?.status ?? 'no response'}: restart \`npm run dev\` (stale Prisma client after a schema change)`)
     }
-    if (node('snapshot-api.mjs', OUT, join(dir, 'api.json'), ORIGIN) !== 0) {
+    const apiStatus = node('snapshot-api.mjs', OUT, join(dir, 'api.json'), ORIGIN)
+    tsx('tests/regression/restore-api.ts', OUT) // always put the links master back, even after a failed run
+    if (apiStatus !== 0) {
       fail('api layer failed — a 500 after a schema change usually means `npm run dev` needs a restart (stale Prisma client)')
     }
   }

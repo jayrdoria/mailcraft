@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { encode } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { redis } from '@/lib/redis'
+import { backupLinksMaster } from './links-master'
 
 interface TokenUser {
   id: string
@@ -44,8 +45,10 @@ async function main() {
     await make({ id: 'regress-nonexistent-user', email: 'nobody@example.com', name: 'nobody', role: 'DEPARTMENT', department: 'crm', canAccessEmails: false })
   )
   if (redis.status === 'wait') await redis.connect() // client is lazyConnect
-  await redis.del(...users.map((u) => `thumbnail-presets:${u.id}`))
-  console.log('api prep: cookies minted, rate limits reset')
+  await redis.del(...users.flatMap((u) => [`thumbnail-presets:${u.id}`, `master-links:${u.id}`]))
+  // 2026-11-17: links cases edit the X7 V2 Whitelist master — back it up (restored after the api layer)
+  await backupLinksMaster(out)
+  console.log('api prep: cookies minted, rate limits reset, links master backed up')
 }
 
 main()
