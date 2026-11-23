@@ -169,6 +169,7 @@ export const POST = apiHandler(async (req) => {
           customBlocks: saved.customBlocks as unknown as CustomBlock[] | null,
           layoutOrder: saved.layoutOrder as unknown as LayoutOrder | null,
           brand: master.brand,
+          darkModeLock: !master.isImported,
         }
       )
       await Promise.all(

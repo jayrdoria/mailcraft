@@ -200,16 +200,24 @@ function buildWelcome(v: Record<string, FieldValue>, align: BodyTextAlign): stri
   if (steps.length > 0) {
     const rows = steps.map((key, i) => {
       const num = String(i + 1).padStart(2, '0')
-      const border = `border-top: 1px solid ${LINE};${i === steps.length - 1 ? ` border-bottom: 1px solid ${LINE};` : ''}`
+      // Divider lines are 1px rows, not CSS borders: Gmail iOS dark mode inverts border colours but the
+      // export lock keeps a row's background (lib/emailDarkMode.ts). Same height as the old 1px borders.
+      const cols = align === 'center' ? 1 : 2
+      const line = `<tr><td colspan="${cols}" height="1" style="height: 1px; padding: 0; background-color: ${LINE}; font-size: 0; line-height: 1px;">&nbsp;</td></tr>`
+      const after = i === steps.length - 1 ? line : ''
       if (align === 'center') {
         return (
-          `<tr><td align="center" style="padding: 14px 0; ${border} font-family: ${FM}; font-size: 15px; font-weight: 700; line-height: 1.4; color: #ffffff; text-align: center; ${BREAK}">` +
-          `<span style="font-family: ${FB}; font-size: 24px; font-weight: 400; line-height: 24px; color: ${RED}; vertical-align: -2px;">${num}</span>&nbsp;&nbsp;&nbsp;${tok(key)}</td></tr>`
+          line +
+          `<tr><td align="center" style="padding: 14px 0; font-family: ${FM}; font-size: 15px; font-weight: 700; line-height: 1.4; color: #ffffff; text-align: center; ${BREAK}">` +
+          `<span style="font-family: ${FB}; font-size: 24px; font-weight: 400; line-height: 24px; color: ${RED}; vertical-align: -2px;">${num}</span>&nbsp;&nbsp;&nbsp;${tok(key)}</td></tr>` +
+          after
         )
       }
       return (
-        `<tr><td width="44" valign="middle" style="width: 44px; padding: 14px 0; ${border} font-family: ${FB}; font-size: 24px; font-weight: 400; line-height: 24px; color: ${RED};">${num}</td>` +
-        `<td valign="middle" style="padding: 14px 0; ${border} font-family: ${FM}; font-size: 15px; font-weight: 700; line-height: 1.4; color: #ffffff; ${BREAK}">${tok(key)}</td></tr>`
+        line +
+        `<tr><td width="44" valign="middle" style="width: 44px; padding: 14px 0; font-family: ${FB}; font-size: 24px; font-weight: 400; line-height: 24px; color: ${RED};">${num}</td>` +
+        `<td valign="middle" style="padding: 14px 0; font-family: ${FM}; font-size: 15px; font-weight: 700; line-height: 1.4; color: #ffffff; ${BREAK}">${tok(key)}</td></tr>` +
+        after
       )
     })
     const top = hasText(v.WB_STEPS_LABEL) ? '' : `<div style="height: 28px; line-height: 28px; font-size: 0">&nbsp;</div>`
@@ -225,10 +233,13 @@ function buildWelcome(v: Record<string, FieldValue>, align: BodyTextAlign): stri
 }
 
 // ── Free Spins (v4): hello · title · subline · game chips · validity · CTA ──
+// Border = 1px padding ring (#2e3038), not a CSS border, so the Gmail iOS dark-mode lock keeps it dark.
+// The white label is its own inline-block so the lock wraps only it — the red bullet stays outside.
 function chip(key: string): string {
   return (
-    `<div style="display: inline-block; margin: 0 4px 8px 4px; padding: 6px 14px 6px 12px; background-color: #141518; border: 1px solid #2e3038; border-radius: 999px; font-family: ${FM}; font-size: 13px; font-weight: 700; line-height: 16px; color: #ffffff; white-space: nowrap;">` +
-    `<span style="color: ${RED}; font-size: 11px; line-height: 16px;">&#9679;</span>&nbsp;&nbsp;${tok(key)}</div>`
+    `<div style="display: inline-block; margin: 0 4px 8px 4px; padding: 1px; background-color: #2e3038; border-radius: 999px;">` +
+    `<div style="padding: 6px 14px 6px 12px; background-color: #141518; border-radius: 999px; font-family: ${FM}; font-size: 13px; font-weight: 700; line-height: 16px; white-space: nowrap;">` +
+    `<span style="color: ${RED}; font-size: 11px; line-height: 16px;">&#9679;</span>&nbsp;&nbsp;<span style="display: inline-block; color: #ffffff;">${tok(key)}</span></div></div>`
   )
 }
 

@@ -41,6 +41,7 @@ export const GET = apiHandler(async (_req, ctx) => {
       customBlocks: saved.customBlocks as unknown as CustomBlock[] | null,
       layoutOrder: saved.layoutOrder as unknown as LayoutOrder | null,
       brand: master.brand,
+      darkModeLock: !master.isImported,
     }
   )
   const zip = new JSZip()

@@ -84,6 +84,7 @@ async function snapshot(dir) {
     tsx('tests/regression/snapshot-logic.ts', join(dir, 'logic'))
     tsx('tests/regression/assert-presets.ts')
     tsx('tests/regression/assert-links.ts')
+    tsx('tests/regression/assert-dark-mode.ts')
   }
   if (layers.includes('api')) {
     await checkServer()
@@ -118,6 +119,7 @@ if (cmd === 'baseline') {
   if (!existsSync(join(OUT, 'baseline'))) fail('no baseline yet — run `npm run regress:baseline` first')
   const dir = join(OUT, 'runs', opt('name', new Date().toISOString().replace(/[:.]/g, '-')))
   await snapshot(dir)
+  if (layers.includes('logic')) tsx('tests/regression/strip-compare.ts', join(OUT, 'baseline'), dir) // dark-mode lock: changed renders must differ only by the lock
   process.exitCode = node('compare.mjs', join(OUT, 'baseline'), dir, ...allow)
   log(`done in ${((Date.now() - started) / 1000).toFixed(1)}s`)
 } else {

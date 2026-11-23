@@ -17,6 +17,7 @@ import { renderBodyParagraphs, type BodyAlignment } from '@/lib/paragraphRendere
 import { escapeHtml, sanitizeUrl } from '@/lib/utils/escapeHtml'
 import { applyBannerText } from '@/lib/bannerText'
 import { applyV2Layouts } from '@/lib/v2Layouts'
+import { lockGmailDarkMode } from '@/lib/emailDarkMode'
 import { lockedTokensFor } from '@/lib/lockedFields'
 
 // ─────────────────────────────────────────────
@@ -35,6 +36,8 @@ export interface BlockRenderContext {
   customBlocks?: CustomBlock[] | null
   layoutOrder?: LayoutOrder | null
   brand?: string
+  // Gmail iOS dark-mode lock on the finished email (built-in masters only — imported HTML is left as is)
+  darkModeLock?: boolean
 }
 
 export function buildSectionTransformer(
@@ -60,6 +63,9 @@ export function buildSectionTransformer(
         result = deleteSection(result, section.name)
       }
     }
+
+    // 3. Last: keep colours in Gmail iOS dark mode (after blocks, so they are covered too)
+    if (blockCtx?.darkModeLock) result = lockGmailDarkMode(result)
     return result
   }
 }

@@ -127,6 +127,7 @@ export const PATCH = apiHandler(async (req, ctx) => {
         customBlocks: updated.customBlocks as unknown as CustomBlock[] | null,
         layoutOrder: updated.layoutOrder as unknown as LayoutOrder | null,
         brand: master.brand,
+        darkModeLock: !master.isImported,
       }
     )
     try {

@@ -6,14 +6,16 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { prisma } from '@/lib/prisma'
 import { activePresetId, mergeLangPatches, presetSlotValues, slotsFromFields } from '@/lib/thumbnailSlots'
-import { renderTemplate } from '@/lib/services/renderService'
+import { buildSectionTransformer, renderTemplate } from '@/lib/services/renderService'
 import { effectiveLockedFields } from '@/lib/masterLinks'
 import type {
   FieldValue,
   Language,
   MultiLanguageFieldValues,
+  SavedSectionConfig,
   TemplateFieldConfig,
 } from '@/lib/types/template'
+import type { CustomBlock, LayoutOrder } from '@/lib/types/blocks'
 import type { ThumbnailPreset } from '@/lib/types/thumbnailPreset'
 import { FIXTURE_PRESETS } from './fixtures'
 
@@ -33,6 +35,18 @@ function defaults(fields: TemplateFieldConfig[], langs: Language[]): LangVals {
   }
   return v
 }
+
+// 2026-11-19 (Gmail dark-mode ticket): optional render paths that are off in the defaults —
+// banner text box (light / non-white light / dark text) and the X7 V2 body designs. Meta keys live on en.
+const VARIANTS: Record<string, Record<string, string>> = {
+  'banner:left-white': { _bannerBox: 'left', _bannerAlign: 'left' },
+  'banner:center-gold': { _bannerBox: 'center', _bannerAlign: 'bottom', _bannerTitleColor: '#F5C542', _bannerSubColor: '#F5C542' },
+  'banner:right-black': { _bannerBox: 'right', _bannerAlign: 'right', _bannerTitleColor: '#000000', _bannerSubColor: '#000000' },
+  'body:welcome': { _bodyLayout: 'welcome' },
+  'body:spins': { _bodyLayout: 'spins', _thumbStyle: 'icons', _moreHeading: 'on' },
+}
+
+const safeName = (key: string) => key.replace(/[^a-zA-Z0-9.-]+/g, '_')
 
 function apply(base: LangVals, patch: LangVals): LangVals {
   const o: LangVals = {}
@@ -84,6 +98,9 @@ async function main() {
   // 2026-11-17: every href in each master's default render, readable (link-admin ticket)
   const links: Record<string, string[]> = {}
   let renderCount = 0
+  // Full HTML of every render (gitignored .out) — lets a ticket prove a diff is only its intended markup
+  const htmlDir = join(out, 'html')
+  mkdirSync(htmlDir, { recursive: true })
 
   for (const m of masters) {
     const fields = m.editableFields as unknown as TemplateFieldConfig[]
@@ -113,12 +130,17 @@ async function main() {
           fieldValues: vals as unknown as MultiLanguageFieldValues,
         })
         renders[key] = sha(html)
+        writeFileSync(join(htmlDir, `${safeName(key)}.html`), html)
         if (tag === 'defaults') links[key] = [...new Set([...html.matchAll(/href="([^"]*)"/g)].map((x) => x[1]))].sort()
         renderCount++
       }
     }
 
     await render('defaults', base)
+    for (const [tag, meta] of Object.entries(VARIANTS)) {
+      if (tag.startsWith('body:') && m.brand !== 'X7_V2') continue
+      await render(tag, apply(base, { en: meta }))
+    }
     for (const slot of slots) active[`${m.slug}|${slot.prefix}|defaults`] = activePresetId(brandPresets, slot, langs, keySet, base)
 
     for (const p of brandPresets) {
@@ -131,6 +153,78 @@ async function main() {
       }
       if (patches.length) await render(`all:${p.id}`, apply(base, mergeLangPatches(patches)))
     }
+  }
+
+  // Every saved template, through the same path as the HTML export route (render + section transformer)
+  const saved = await prisma.savedTemplate.findMany({ include: { masterTemplate: true }, orderBy: { id: 'asc' } })
+  for (const t of saved) {
+    const m = t.masterTemplate
+    const transformer = buildSectionTransformer(t.sectionConfig as unknown as SavedSectionConfig[], {
+      customBlocks: t.customBlocks as unknown as CustomBlock[] | null,
+      layoutOrder: t.layoutOrder as unknown as LayoutOrder | null,
+      brand: m.brand,
+      darkModeLock: !m.isImported, // same flag as every export route
+    })
+    for (const lang of m.languages as unknown as Language[]) {
+      const key = `saved:${t.id}|${lang}`
+      if (!existsSync(join(m.baseFilePath, `${lang}.html`))) {
+        renders[key] = 'missing-file'
+        continue
+      }
+      const html = transformer(
+        await renderTemplate({
+          masterTemplateId: m.id,
+          baseFilePath: m.baseFilePath,
+          lang,
+          brand: m.brand,
+          lockedFields: effectiveLockedFields(t, m),
+          editableFields: m.editableFields as unknown as TemplateFieldConfig[],
+          fieldValues: t.fieldValues as unknown as MultiLanguageFieldValues,
+        }),
+        lang
+      )
+      renders[key] = sha(html)
+      writeFileSync(join(htmlDir, `${safeName(key)}.html`), html)
+      renderCount++
+    }
+  }
+
+  // 2026-11-23 (Gmail dark-mode ticket): default custom blocks (text / button / divider) inside every built-in
+  // master, through the export path — blocks are composed after the master render, then the lock runs last.
+  const FIXTURE_BLOCKS: CustomBlock[] = [
+    { id: 'fx-text', type: 'text', props: {}, content: { en: { html: '<p>Block text <strong>bold</strong></p>' } } },
+    { id: 'fx-button', type: 'button', props: {}, content: { en: { label: 'Block CTA', href: 'https://example.com/cta' } } },
+    { id: 'fx-divider', type: 'divider', props: {}, content: {} },
+  ]
+  for (const m of masters.filter((x) => !x.isImported)) {
+    const fields = m.editableFields as unknown as TemplateFieldConfig[]
+    if (!existsSync(join(m.baseFilePath, 'en.html'))) continue
+    const transformer = buildSectionTransformer([], {
+      customBlocks: FIXTURE_BLOCKS,
+      layoutOrder: [
+        { kind: 'section', name: 'HEADER' },
+        { kind: 'section', name: 'BODY' },
+        ...FIXTURE_BLOCKS.map((blk) => ({ kind: 'block' as const, id: blk.id })),
+      ],
+      brand: m.brand,
+      darkModeLock: !m.isImported,
+    })
+    const html = transformer(
+      await renderTemplate({
+        masterTemplateId: m.id,
+        baseFilePath: m.baseFilePath,
+        lang: 'en',
+        brand: m.brand,
+        lockedFields: effectiveLockedFields({ lockedFieldsSnapshot: null }, m),
+        editableFields: fields,
+        fieldValues: defaults(fields, ['en']) as unknown as MultiLanguageFieldValues,
+      }),
+      'en'
+    )
+    const key = `fixture:blocks|${m.slug}|en`
+    renders[key] = sha(html)
+    writeFileSync(join(htmlDir, `${safeName(key)}.html`), html)
+    renderCount++
   }
 
   writeFileSync(join(out, 'fills.json'), JSON.stringify(fills, null, 1))

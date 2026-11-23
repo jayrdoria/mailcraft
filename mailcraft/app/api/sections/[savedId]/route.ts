@@ -23,6 +23,7 @@ async function rerender(saved: {
   masterTemplate: {
     id: string
     brand: string
+    isImported: boolean
     baseFilePath: string
     lockedFields: unknown
     editableFields: unknown
@@ -39,6 +40,7 @@ async function rerender(saved: {
       customBlocks: saved.customBlocks as unknown as CustomBlock[] | null,
       layoutOrder: saved.layoutOrder as unknown as LayoutOrder | null,
       brand: saved.masterTemplate.brand,
+      darkModeLock: !saved.masterTemplate.isImported,
     }
   )
   try {

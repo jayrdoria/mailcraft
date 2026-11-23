@@ -59,6 +59,7 @@ export const GET = apiHandler(async (req, ctx) => {
       customBlocks: saved.customBlocks as unknown as CustomBlock[] | null,
       layoutOrder: saved.layoutOrder as unknown as LayoutOrder | null,
       brand: master.brand,
+      darkModeLock: !master.isImported,
     }
   )
   html = cleanHtml(transformer(html, lang))

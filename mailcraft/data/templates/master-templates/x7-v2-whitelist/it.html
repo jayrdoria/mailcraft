@@ -99,6 +99,17 @@
           width: 70% !important;
           max-width: 70% !important;
         }
+        /* Fluid promo cards (2026-11-23): where @media works, keep the old stacked 70% look; where it
+           is stripped (Gmail, CIO drag-and-drop) the 272px max-width columns still stack on their own */
+        .promo-fluid {
+          display: block !important;
+          width: 70% !important;
+          max-width: 70% !important;
+          margin: 0 auto !important;
+        }
+        .promo-gutter {
+          padding: 0 0 20px 0 !important;
+        }
         .footer-icons-td {
           padding: 16px 8px 8px 8px !important;
         }
@@ -344,225 +355,16 @@
                   <!-- SECTION:END:USERNAME_PASSWORD -->
 
                   <!-- SECTION:START:THUMBNAILS -->
-                  <!-- V2THUMBS:START --><!-- PROMO CARDS — 2 col desktop, stacked mobile -->
+                  <!-- V2THUMBS:START --><!-- PROMO CARDS — side by side on desktop, stacked on phones WITHOUT @media (fluid-hybrid: 272px inline-block columns + Outlook ghost table). Border = 1px padding ring (#2a2d3a), not a CSS border, so the Gmail iOS dark-mode lock can keep it dark -->
                   <tr>
-                    <td
-                      class="promo-td"
-                      style="
-                        padding: 12px 16px 24px 16px;
-                        background-color: #000000;
-                      "
-                    >
-                      <table
-                        width="100%"
-                        border="0"
-                        cellpadding="0"
-                        cellspacing="0"
-                        style="table-layout: fixed; width: 100%"
-                      >
-                        <tbody>
-                          <tr>
-                            <!-- Card 1 -->
-                            <td
-                              align="center"
-                              valign="top"
-                              width="50%"
-                              class="promo-col-3"
-                              style="padding: 0 8px 0 0"
-                            >
-                              <table
-                                width="100%"
-                                border="0"
-                                cellpadding="0"
-                                cellspacing="0"
-                                align="center"
-                                bgcolor="#1a1b1e"
-                                class="promo-card"
-                                style="
-                                  width: 100%;
-                                  background-color: #1a1b1e;
-                                  border: 1px solid #2a2d3a;
-                                  border-radius: 8px;
-                                  border-collapse: separate;
-                                  overflow: hidden;
-                                "
-                              >
-                                <tbody>
-                                  <tr>
-                                    <td
-                                      style="
-                                        padding: 0;
-                                        line-height: 0;
-                                        font-size: 0;
-                                      "
-                                    >
-                                      <a
-                                        href="{{THUMB1_LINK}}"
-                                        target="_blank"
-                                        style="
-                                          text-decoration: none;
-                                          display: block;
-                                        "
-                                      >
-                                        <img
-                                          src="{{THUMB1_IMG}}"
-                                          alt="{{THUMB1_LABEL}}"
-                                          width="260"
-                                          draggable="false"
-                                          style="
-                                            display: block;
-                                            width: 100%;
-                                            border-radius: 7px 7px 0 0;
-                                          "
-                                        />
-                                      </a>
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td
-                                      align="center"
-                                      valign="middle"
-                                      style="padding: 10px 10px 12px 10px"
-                                    >
-                                      <p
-                                        style="
-                                          margin: 0;
-                                          font-family: 'Manrope',
-                                            'Helvetica Neue', Helvetica, Arial,
-                                            sans-serif;
-                                          font-size: 14px;
-                                          font-weight: 700;
-                                          color: #ffffff;
-                                          text-align: center;
-                                          text-transform: uppercase;
-                                          letter-spacing: 0.5px;
-                                          word-break: break-word;
-                                          overflow-wrap: break-word;
-                                        "
-                                      >
-                                        {{THUMB1_LABEL}}
-                                      </p>
-                                      <p
-                                        style="
-                                          margin: 0;
-                                          font-family: 'Manrope',
-                                            'Helvetica Neue', Helvetica, Arial,
-                                            sans-serif;
-                                          font-size: 12px;
-                                          font-weight: 700;
-                                          color: #c80824;
-                                          text-align: center;
-                                        "
-                                      >
-                                        {{THUMB1_SUBLABEL}}
-                                      </p>
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </td>
-                            <!-- Card 2 -->
-                            <td
-                              align="center"
-                              valign="top"
-                              width="50%"
-                              class="promo-col-3"
-                              style="padding: 0 0 0 8px"
-                            >
-                              <table
-                                width="100%"
-                                border="0"
-                                cellpadding="0"
-                                cellspacing="0"
-                                align="center"
-                                bgcolor="#1a1b1e"
-                                class="promo-card"
-                                style="
-                                  width: 100%;
-                                  background-color: #1a1b1e;
-                                  border: 1px solid #2a2d3a;
-                                  border-radius: 8px;
-                                  border-collapse: separate;
-                                  overflow: hidden;
-                                "
-                              >
-                                <tbody>
-                                  <tr>
-                                    <td
-                                      style="
-                                        padding: 0;
-                                        line-height: 0;
-                                        font-size: 0;
-                                      "
-                                    >
-                                      <a
-                                        href="{{THUMB2_LINK}}"
-                                        target="_blank"
-                                        style="
-                                          text-decoration: none;
-                                          display: block;
-                                        "
-                                      >
-                                        <img
-                                          src="{{THUMB2_IMG}}"
-                                          alt="{{THUMB2_LABEL}}"
-                                          width="260"
-                                          draggable="false"
-                                          style="
-                                            display: block;
-                                            width: 100%;
-                                            border-radius: 7px 7px 0 0;
-                                          "
-                                        />
-                                      </a>
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td
-                                      align="center"
-                                      valign="middle"
-                                      style="padding: 10px 10px 12px 10px"
-                                    >
-                                      <p
-                                        style="
-                                          margin: 0;
-                                          font-family: 'Manrope',
-                                            'Helvetica Neue', Helvetica, Arial,
-                                            sans-serif;
-                                          font-size: 14px;
-                                          font-weight: 700;
-                                          color: #ffffff;
-                                          text-align: center;
-                                          text-transform: uppercase;
-                                          letter-spacing: 0.5px;
-                                          word-break: break-word;
-                                          overflow-wrap: break-word;
-                                        "
-                                      >
-                                        {{THUMB2_LABEL}}
-                                      </p>
-                                      <p
-                                        style="
-                                          margin: 0;
-                                          font-family: 'Manrope',
-                                            'Helvetica Neue', Helvetica, Arial,
-                                            sans-serif;
-                                          font-size: 12px;
-                                          font-weight: 700;
-                                          color: #c80824;
-                                          text-align: center;
-                                        "
-                                      >
-                                        {{THUMB2_SUBLABEL}}
-                                      </p>
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    <td class="promo-td" align="center" style="padding: 12px 8px 8px 8px; background-color: #000000; font-size: 0; text-align: center;">
+                  <!--[if mso]><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="544"><tr><td width="272" valign="top"><![endif]-->
+                  <!-- Card 1 -->
+                  <div class="promo-fluid" style="display: inline-block; width: 100%; max-width: 272px; vertical-align: top;"><table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%;"><tr><td class="promo-gutter" style="padding: 0 8px 16px 8px;"><table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#2a2d3a" style="width: 100%; background-color: #2a2d3a; border-radius: 8px; border-collapse: separate;"><tr><td style="padding: 1px;"><table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#1a1b1e" style="width: 100%; background-color: #1a1b1e; border-radius: 7px; border-collapse: separate; overflow: hidden;"><tr><td style="padding: 0; line-height: 0; font-size: 0;"><a href="{{THUMB1_LINK}}" target="_blank" style="text-decoration: none; display: block;"><img src="{{THUMB1_IMG}}" alt="{{THUMB1_LABEL}}" width="254" draggable="false" style="display: block; width: 100%; border-radius: 7px 7px 0 0;" /></a></td></tr><tr><td align="center" valign="middle" style="padding: 10px 10px 12px 10px;"><p style="margin: 0; font-family: 'Manrope', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; word-break: break-word; overflow-wrap: break-word;">{{THUMB1_LABEL}}</p><p style="margin: 0; font-family: 'Manrope', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #c80824; text-align: center;">{{THUMB1_SUBLABEL}}</p></td></tr></table></td></tr></table></td></tr></table></div>
+                  <!--[if mso]></td><td width="272" valign="top"><![endif]-->
+                  <!-- Card 2 -->
+                  <div class="promo-fluid" style="display: inline-block; width: 100%; max-width: 272px; vertical-align: top;"><table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%;"><tr><td class="promo-gutter" style="padding: 0 8px 16px 8px;"><table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#2a2d3a" style="width: 100%; background-color: #2a2d3a; border-radius: 8px; border-collapse: separate;"><tr><td style="padding: 1px;"><table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#1a1b1e" style="width: 100%; background-color: #1a1b1e; border-radius: 7px; border-collapse: separate; overflow: hidden;"><tr><td style="padding: 0; line-height: 0; font-size: 0;"><a href="{{THUMB2_LINK}}" target="_blank" style="text-decoration: none; display: block;"><img src="{{THUMB2_IMG}}" alt="{{THUMB2_LABEL}}" width="254" draggable="false" style="display: block; width: 100%; border-radius: 7px 7px 0 0;" /></a></td></tr><tr><td align="center" valign="middle" style="padding: 10px 10px 12px 10px;"><p style="margin: 0; font-family: 'Manrope', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; word-break: break-word; overflow-wrap: break-word;">{{THUMB2_LABEL}}</p><p style="margin: 0; font-family: 'Manrope', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #c80824; text-align: center;">{{THUMB2_SUBLABEL}}</p></td></tr></table></td></tr></table></td></tr></table></div>
+                  <!--[if mso]></td></tr></table><![endif]-->
                     </td>
                   </tr><!-- V2THUMBS:END -->
                   <!-- SECTION:END:THUMBNAILS -->
