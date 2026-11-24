@@ -21,3 +21,21 @@ export const X7V2_LOGO2_LINK = {
   note: 'Responsible gaming 18+ logo href',
   isReadOnly: false,
 }
+
+// X7 V2 + Whitelist footer refresh (2026-11-24): GamCare replaces the Play Responsibly + Kahnawake logos
+export const GAMCARE_URL = 'https://www.gamcare.org.uk/'
+export const X7V2_GAMCARE_LINK = {
+  key: 'FOOTER_GAMCARE_LINK',
+  label: 'GamCare Logo Link',
+  value: GAMCARE_URL,
+  note: 'GamCare logo href',
+  isReadOnly: false,
+}
+
+// Whitelist responsible-gaming page per language — every language (DE too) on x7casino.io
+export const x7WhitelistRgUrl = (lang: string) => `https://x7casino.io/${lang}/responsible-gaming`
+export const X7V2_WL_LOGO2_LINK = {
+  ...X7V2_LOGO2_LINK,
+  value: x7WhitelistRgUrl('en'),
+  values: Object.fromEntries(['fr', 'de', 'it', 'es'].map((l) => [l, x7WhitelistRgUrl(l)])),
+}

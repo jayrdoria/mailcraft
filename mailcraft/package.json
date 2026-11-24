@@ -16,6 +16,7 @@
     "db:seed:x7v2-layouts": "dotenv -e .env.development -- tsx prisma/seed-x7v2-layouts.ts",
     "db:seed:x7v2-whitelist": "dotenv -e .env.development -- tsx prisma/seed-x7v2-whitelist.ts",
     "db:seed:locked-links": "dotenv -e .env.development -- tsx prisma/seed-locked-links.ts",
+    "db:seed:x7v2-footer": "dotenv -e .env.development -- tsx prisma/seed-x7v2-footer.ts",
     "db:studio": "dotenv -e .env.development -- prisma studio",
     "regress": "node tests/regression/run.mjs check",
     "regress:baseline": "node tests/regression/run.mjs baseline"

@@ -13,7 +13,6 @@ const ok = (name: string, cond: boolean, detail = '') => {
 
 const OUT = join(process.cwd(), 'tests/regression/.out')
 const CORPUS = join(OUT, 'baseline/logic/html')
-const POC_F = join(process.cwd(), '../Approved Emails/X7 Casino V2/poc/dark-mode-poc-F.html')
 const OWN_GRADIENT = /linear-gradient\((#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?), \1\)/g
 
 // ── Unit cases ──
@@ -51,6 +50,16 @@ const tableLocked = lockGmailDarkMode(tableCell)
 ok('cell containing a table is not wrapped as a unit', tableLocked.startsWith('<body><td style="color: #ffffff">Text<table>'))
 ok('its inner cell (inherits white) is wrapped', (tableLocked.match(/mix-blend-mode: screen/g) ?? []).length === 1)
 
+// Lists (2026-11-24): the whole <ul> is wrapped — a block wrapper inside an `inside`-marker <li> drops the text below the bullet
+const list = '<body><td style="background-color: #000000"><ul style="list-style-position: inside;"><li style="color: #ffffff;">One <strong>a</strong></li><li style="color: #ffffff;">Two</li></ul></td></body>'
+const listLocked = lockGmailDarkMode(list)
+ok('list: wrapped once, outside the <ul>', (listLocked.match(/mix-blend-mode: screen/g) ?? []).length === 1 && /mix-blend-mode: difference;"><!--<!\[endif\]--><ul /.test(listLocked))
+ok('list: <li> content not wrapped', listLocked.includes('<li style="color: #ffffff;">One <strong>a</strong></li>'))
+ok('list: closes after </ul>', listLocked.includes('</ul><!--[if !mso]><!--></div></div><!--<![endif]--></td>'))
+ok('list: no unlocked white', findUnlockedWhiteText(listLocked).length === 0)
+ok('list: strip exact', stripGmailDarkMode(listLocked) === list)
+ok('list: idempotent', lockGmailDarkMode(listLocked) === listLocked)
+
 const mso = '<body><!--[if mso]><td style="background-color:#000000;color:#ffffff">x</td><![endif]--></body>'
 ok('conditional comments untouched', lockGmailDarkMode(mso) === mso)
 
@@ -64,7 +73,11 @@ if (!existsSync(CORPUS)) {
   let unlocked = 0
   const unlockedSamples: string[] = []
   for (const f of files) {
-    const html = readFileSync(join(CORPUS, f), 'utf8')
+    const raw = readFileSync(join(CORPUS, f), 'utf8')
+    // Export-path renders (saved / fixture) already carry the lock since 2026-11-23 → test against their unlocked source
+    const preLocked = /mix-blend-mode/.test(raw)
+    const html = preLocked ? stripGmailDarkMode(raw) : raw
+    if (preLocked) ok(`already-locked render is lock(strip(x)): ${f}`, lockGmailDarkMode(html) === raw)
     ok(`precondition ${f}: no blend / own gradients`, !/mix-blend-mode/.test(html) && !OWN_GRADIENT.test(html))
     OWN_GRADIENT.lastIndex = 0
     const locked = lockGmailDarkMode(html)
@@ -88,18 +101,6 @@ if (!existsSync(CORPUS)) {
   ok(`idempotent for all ${files.length} renders`, idem === files.length)
   ok('no white text left unlocked', unlocked === 0, `${unlocked} left, e.g. ${unlockedSamples.slice(0, 5).join(' || ')}`)
 
-  // ── Device-approved reference: lock(V2 banner render) == POC F outside the promo cards ──
-  const v2 = join(CORPUS, 'x7-casino-v2-template_en_banner_left-white.html')
-  if (existsSync(POC_F) && existsSync(v2)) {
-    const outsideCards = (h: string) =>
-      h
-        .replace(/<!-- SECTION:START:THUMBNAILS -->[\s\S]*?<!-- SECTION:END:THUMBNAILS -->/, '')
-        .replace(/; background-image: linear-gradient\(#ececec, #ececec\)/g, '') // POC locked the light outer grey too
-        .replace(/\s+/g, ' ')
-    const mine = outsideCards(lockGmailDarkMode(readFileSync(v2, 'utf8')))
-    const poc = outsideCards(readFileSync(POC_F, 'utf8'))
-    ok('lock(V2) matches POC F outside the cards', mine === poc, firstDiff(mine, poc))
-  } else failures.push('POC F or the V2 banner render is missing')
 }
 
 // ── Phase 3 guards: X7 V2 + Whitelist promo cards (fluid columns + 1px ring) and V2 layout lines/chips ──
@@ -115,12 +116,6 @@ for (const dir of ['x7-v2', 'x7-v2-whitelist']) {
 }
 const layouts = readFileSync(join(process.cwd(), 'lib/v2Layouts.ts'), 'utf8')
 ok('v2Layouts: no dark CSS borders on chips / step lines', !/border(?:-top|-bottom)?:\s*1px solid (?:#2e3038|\$\{LINE\})/.test(layouts))
-
-function firstDiff(a: string, b: string): string {
-  let i = 0
-  while (i < a.length && a[i] === b[i]) i++
-  return i >= a.length && i >= b.length ? '' : `at ${i}: mine «${a.slice(i - 40, i + 80)}» vs poc «${b.slice(i - 40, i + 80)}»`
-}
 
 if (failures.length) {
   failures.slice(0, 20).forEach((f) => console.error(`  FAIL ${f}`))

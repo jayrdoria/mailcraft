@@ -11,6 +11,9 @@
 //    difference. Gmail's inversion cancels itself out; in every other client the
 //    blend is an identity. Only white survives the maths, so only white is locked.
 //    The wrappers are hidden from Outlook (Word paints span backgrounds, no blending).
+//  · Lists: the whole <ul>/<ol> is wrapped (in divs) instead of each <li>'s content —
+//    a block wrapper inside a `list-style-position: inside` item pushes the text below
+//    its marker, and wrapping the list also locks the white markers (2026-11-24).
 //
 // Byte-preserving: the original HTML is never re-serialised, only insertions are
 // made — stripGmailDarkMode() removes exactly those, which is how the regression
@@ -26,6 +29,11 @@ const pairOpen = (d: PairDisplay) =>
   `${NOT_MSO_OPEN}<span style="display: ${d}; background-color: #000000; mix-blend-mode: screen;">` +
   `<span style="display: ${d}; background-color: #000000; mix-blend-mode: difference;">${NOT_MSO_CLOSE}`
 const PAIR_CLOSE = `${NOT_MSO_OPEN}</span></span>${NOT_MSO_CLOSE}`
+const LIST_PAIR_OPEN =
+  `${NOT_MSO_OPEN}<div style="display: block; background-color: #000000; mix-blend-mode: screen;">` +
+  `<div style="display: block; background-color: #000000; mix-blend-mode: difference;">${NOT_MSO_CLOSE}`
+const LIST_PAIR_CLOSE = `${NOT_MSO_OPEN}</div></div>${NOT_MSO_CLOSE}`
+const LIST_TAGS = new Set(['ul', 'ol'])
 
 const gradient = (hex: string) => `background-image: linear-gradient(${hex}, ${hex})`
 
@@ -145,11 +153,13 @@ interface Frame {
   tag: string
   color: string | null // effective text colour
   display: 'block' | 'inline-block' | 'inline'
+  openStart: number // offset of the start tag
   openEnd: number // offset right after the start tag
   locked: boolean // inside one of our wrappers already
   hasWhiteText: boolean // has white text whose nearest block/inline-block ancestor is this element
   hasTable: boolean // contains table structure (can't be wrapped as a unit)
   hasWrapChild: boolean // a descendant is itself wrapped (avoid nested wrappers)
+  hasWhiteItem: boolean // <ul>/<ol>: one of its <li> has white text → wrap the whole list
 }
 
 /** Lock an exported email against Gmail iOS dark-mode inversion. Idempotent, insertions only. */
@@ -175,7 +185,7 @@ export function lockGmailDarkMode(html: string): string {
   const bodyAt = html.search(/<body\b/i)
   const tokens = tokenize(html, bodyAt === -1 ? 0 : bodyAt)
   const stack: Frame[] = [
-    { tag: '#root', color: null, display: 'block', openEnd: 0, locked: false, hasWhiteText: false, hasTable: false, hasWrapChild: false },
+    { tag: '#root', color: null, display: 'block', openStart: 0, openEnd: 0, locked: false, hasWhiteText: false, hasTable: false, hasWrapChild: false, hasWhiteItem: false },
   ]
 
   const nearestTarget = (): Frame => {
@@ -183,9 +193,21 @@ export function lockGmailDarkMode(html: string): string {
     return stack[0]
   }
 
-  const closeFrame = (frame: Frame, closeStart: number) => {
+  // closeEnd = offset after the element's own close tag (closeStart when it was closed implicitly)
+  const closeFrame = (frame: Frame, closeStart: number, closeEnd = closeStart) => {
     const parent = stack[stack.length - 1]
     if (frame.hasTable || TABLE_TAGS.has(frame.tag)) parent.hasTable = true
+    // A list item's white text is locked by wrapping its whole list (see header)
+    if (frame.tag === 'li' && LIST_TAGS.has(parent.tag) && frame.hasWhiteText && !frame.hasWrapChild) {
+      parent.hasWhiteItem = true
+      return
+    }
+    if (LIST_TAGS.has(frame.tag) && frame.hasWhiteItem && !frame.locked && !frame.hasTable && !frame.hasWrapChild) {
+      insertions.push({ at: frame.openStart, text: LIST_PAIR_OPEN, order: 2 })
+      insertions.push({ at: closeEnd, text: LIST_PAIR_CLOSE, order: 0 })
+      parent.hasWrapChild = true
+      return
+    }
     const wrap = frame.hasWhiteText && !frame.locked && !frame.hasTable && !frame.hasWrapChild && frame.tag !== '#root'
     if (wrap) {
       const d: PairDisplay = frame.display === 'inline-block' ? 'inline-block' : 'block'
@@ -207,7 +229,7 @@ export function lockGmailDarkMode(html: string): string {
       if (idx <= 0) continue
       while (stack.length > idx) {
         const frame = stack.pop()!
-        closeFrame(frame, tok.start)
+        closeFrame(frame, tok.start, stack.length === idx ? tok.end : tok.start)
       }
       continue
     }
@@ -224,11 +246,13 @@ export function lockGmailDarkMode(html: string): string {
       tag,
       color: own ?? parent.color,
       display: displayOf(tag, style),
+      openStart: tok.start,
       openEnd: tok.end,
       locked: parent.locked || ours,
       hasWhiteText: false,
       hasTable: false,
       hasWrapChild: false,
+      hasWhiteItem: false,
     })
     if (ours) parent.hasWrapChild = true // already locked content — never wrap around it again
   }
@@ -252,6 +276,8 @@ export function stripGmailDarkMode(html: string): string {
     .replace(new RegExp(esc(pairOpen('block')), 'g'), '')
     .replace(new RegExp(esc(pairOpen('inline-block')), 'g'), '')
     .replace(new RegExp(esc(PAIR_CLOSE), 'g'), '')
+    .replace(new RegExp(esc(LIST_PAIR_OPEN), 'g'), '')
+    .replace(new RegExp(esc(LIST_PAIR_CLOSE), 'g'), '')
     .replace(new RegExp(` style="background-image: linear-gradient\\((${HEX}), \\1\\);"`, 'g'), '')
     .replace(new RegExp(` background-image: linear-gradient\\((${HEX}), \\1\\)( !important)?;`, 'g'), '')
     .replace(new RegExp(`; background-image: linear-gradient\\((${HEX}), \\1\\)( !important)?(?=\\s*")`, 'g'), '')

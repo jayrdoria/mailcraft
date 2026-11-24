@@ -27,12 +27,19 @@ export function currentLockedFields(master: MasterLinksLike): LockedFieldConfig[
   return ((master.currentLockedFields ?? master.lockedFields) as LockedFieldConfig[] | null) ?? []
 }
 
-/** Locked links an existing saved template renders with — its own snapshot, else the baseline. */
+/**
+ * Locked links an existing saved template renders with — its own snapshot, else the baseline.
+ * Keys added to the master later (e.g. FOOTER_GAMCARE_LINK, 2026-11-24) come from the current links,
+ * so a new {{token}} in the master HTML never renders unresolved in an older template.
+ */
 export function effectiveLockedFields(
   saved: { lockedFieldsSnapshot?: unknown },
   master: MasterLinksLike
 ): LockedFieldConfig[] {
-  return ((saved.lockedFieldsSnapshot ?? master.lockedFields) as LockedFieldConfig[] | null) ?? []
+  const own = ((saved.lockedFieldsSnapshot ?? master.lockedFields) as LockedFieldConfig[] | null) ?? []
+  const keys = new Set(own.map((f) => f.key))
+  const added = currentLockedFields(master).filter((f) => !keys.has(f.key))
+  return added.length ? [...own, ...added] : own
 }
 
 /** Current default of an editable field for one language. */

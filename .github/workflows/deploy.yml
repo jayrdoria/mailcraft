@@ -94,6 +94,15 @@ jobs:
               ghcr.io/jayrdoria/mailcraft:migrate \
               npx tsx prisma/seed-locked-links.ts
 
+            # X7 V2 + Whitelist footer refresh, phase 1 (add-only): FOOTER_GAMCARE_LINK + WL 18+ links.
+            # Runs BEFORE git pull so the new master HTML's {{FOOTER_GAMCARE_LINK}} never renders unresolved.
+            docker run --rm \
+              --network mailcraft_default \
+              --env-file .env \
+              -e REDIS_URL=redis://redis:6379 \
+              ghcr.io/jayrdoria/mailcraft:migrate \
+              npx tsx prisma/seed-x7v2-footer.ts --phase=pre
+
             git pull
 
             docker run --rm \
@@ -143,6 +152,17 @@ jobs:
               ghcr.io/jayrdoria/mailcraft:migrate \
               npx tsx prisma/seed-x7v2-layouts.ts \
               || echo "WARNING: X7 V2 layout fields failed — app is deployed; check the log above"
+
+            # X7 V2 + Whitelist footer refresh, phase 2 (new master HTML is live): drops the Play Responsibly /
+            # Kahnawake links + BL license field, sets the WL Boni Tech license and per-language RG link
+            # defaults. New templates only — saved templates are never touched. Clears the V2/WL HTML cache.
+            docker run --rm \
+              --network mailcraft_default \
+              --env-file .env \
+              -e REDIS_URL=redis://redis:6379 \
+              ghcr.io/jayrdoria/mailcraft:migrate \
+              npx tsx prisma/seed-x7v2-footer.ts --phase=post \
+              || echo "WARNING: X7 V2 footer refresh (post) failed — app is deployed; check the log above"
 
             docker image prune -f
 

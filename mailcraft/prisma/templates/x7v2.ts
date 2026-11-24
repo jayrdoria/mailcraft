@@ -4,7 +4,7 @@
 
 import { withBannerTextFields } from './bannerText'
 import { withV2LayoutFields } from './x7v2Layouts'
-import { X7V2_LOGO2_LINK } from './lockedLinks'
+import { X7V2_GAMCARE_LINK, X7V2_LOGO2_LINK } from './lockedLinks'
 
 export const X7_V2_SLUG = 'x7-casino-v2-template'
 export const X7_V2_LANGUAGES = ['en', 'fr', 'de', 'it', 'es']
@@ -197,17 +197,7 @@ export const x7v2EditableFields = [
     },
   },
 
-  // Legal (separate Configure section)
-  {
-    key: 'FOOTER_LICENSE', label: 'License Text', type: 'richtext', group: 'Legal',
-    defaultValues: {
-      en: 'This website is licensed under Starscream Limited, a company incorporated under the laws of Saint Lucia with registration number 2023-00007 and registered address in Saint Lucia. Starscream Limited is licensed and regulated in virtue of a Client Provider Authorization numbered 00952 issued on July 2023 by the Kahnawake Gaming Commission.',
-      fr: 'Ce site est exploité par Starscream Limited, société immatriculée à Saint-Lucie sous le n° 2023-00007. Licenciée et réglementée en vertu de l\'Autorisation n° 00952 délivrée en juillet 2023 par la Commission des jeux de Kahnawake.',
-      de: 'Diese Website wird von Starscream Limited betrieben, einem in Saint Lucia eingetragenen Unternehmen (Nr. 2023-00007). Lizenziert und reguliert gemäß der Client Provider Authorization Nr. 00952, ausgestellt im Juli 2023 von der Kahnawake Gaming Commission.',
-      it: 'Questo sito è gestito da Starscream Limited, società costituita ai sensi delle leggi di Saint Lucia con numero di registrazione 2023-00007. Autorizzata e regolamentata in virtù dell\'Autorizzazione n. 00952 rilasciata nel luglio 2023 dalla Kahnawake Gaming Commission.',
-      es: 'Este sitio está operado por Starscream Limited, empresa constituida bajo las leyes de Santa Lucía con número de registro 2023-00007. Licenciada y regulada en virtud de la Autorización n.° 00952 emitida en julio de 2023 por la Kahnawake Gaming Commission.',
-    },
-  },
+  // Legal (separate Configure section). 2026-11-24: no license text on X7 V2 (BL) — the Whitelist adds its own.
   {
     key: 'FOOTER_LEGAL', label: 'Responsible Gambling Text', type: 'richtext', group: 'Legal',
     defaultValues: {
@@ -231,10 +221,10 @@ export const x7v2EditableFields = [
 ]
 
 // The 18+ logo link is per-language (locked `values`) — {{FOOTER_LOGO2_LINK}} in each {lang}.html.
+// 2026-11-24: Play Responsibly (LOGO1) + Kahnawake (LOGO3) logos replaced by GamCare.
 export const x7v2LockedFields = [
-  { key: 'FOOTER_LOGO1_LINK', label: 'Play Responsibly Logo Link', value: 'https://gamingcommission.ca/interactive-gaming/players/#plLE', note: 'Play Responsibly logo href',           isReadOnly: false },
-  { key: 'FOOTER_LOGO3_LINK', label: 'Kahnawake Logo Link',        value: 'https://gamingcommission.ca/interactive-gaming/players/#plLE', note: 'Kahnawake Gaming Commission logo href', isReadOnly: false },
   X7V2_LOGO2_LINK,
+  X7V2_GAMCARE_LINK,
 ]
 
 // Fields refreshed on every upsert (mirrors the update block of the other master templates)

@@ -6,7 +6,8 @@ import { currentLockedFields, effectiveLockedFields, refreshStaleDefaults } from
 import { renderTemplate } from '@/lib/services/renderService'
 import { LinkEditError, applyLinkEdits, isSafeLink, listLinkSlots } from '@/lib/services/masterLinkService'
 import { prisma } from '@/lib/prisma'
-import { X7_V2_WL_SLUG, toWhitelistLinks } from '@/prisma/templates/x7v2Whitelist'
+import { X7_V2_WL_SLUG, toWhitelistLinks, x7v2WhitelistUpdateData } from '@/prisma/templates/x7v2Whitelist'
+import { x7v2UpdateData } from '@/prisma/templates/x7v2'
 import type {
   Language,
   LockedFieldConfig,
@@ -38,6 +39,27 @@ eq('snapshot wins', effectiveLockedFields({ lockedFieldsSnapshot: cur }, { locke
 eq('current → admin links', currentLockedFields({ lockedFields: base, currentLockedFields: cur }), cur)
 eq('current → baseline when unset', currentLockedFields({ lockedFields: base, currentLockedFields: null }), base)
 eq('imported master (no locked)', currentLockedFields({ lockedFields: [] }), [])
+
+// ── 2026-11-24: keys added to the master later fall back to the current links (no unresolved {{token}}) ──
+const gam: LockedFieldConfig = { key: 'G', label: 'G', value: 'https://gam.example/', isReadOnly: false }
+eq('snapshot + new master key', effectiveLockedFields({ lockedFieldsSnapshot: cur }, { lockedFields: base, currentLockedFields: [...cur, gam] }), [...cur, gam])
+eq('baseline + new key from current', effectiveLockedFields({ lockedFieldsSnapshot: null }, { lockedFields: base, currentLockedFields: [{ ...logo, value: 'https://x.com' }, gam] }), [...base, gam])
+eq('snapshot keeps its own value for known keys', effectiveLockedFields({ lockedFieldsSnapshot: cur }, { lockedFields: [{ ...logo, value: 'https://other.com' }] }), cur)
+
+// ── 2026-11-24: X7 V2 (BL) + Whitelist (WL) footer config ──
+const bl = x7v2UpdateData('/t')
+const wlCfg = x7v2WhitelistUpdateData('/t')
+eq('BL locked keys', bl.lockedFields.map((f) => f.key), ['FOOTER_LOGO2_LINK', 'FOOTER_GAMCARE_LINK'])
+eq('WL locked keys', wlCfg.lockedFields.map((f) => f.key), ['FOOTER_LOGO2_LINK', 'FOOTER_GAMCARE_LINK'])
+eq('BL/WL GamCare', [bl, wlCfg].map((c) => c.lockedFields[1].value), ['https://www.gamcare.org.uk/', 'https://www.gamcare.org.uk/'])
+eq('BL 18+ per language', (['en', 'fr', 'de', 'it', 'es'] as Language[]).map((l) => lockedValue(bl.lockedFields[0] as LockedFieldConfig, l)),
+  ['en', 'fr', 'de', 'it', 'es'].map((l) => `https://${l === 'de' ? 'x7casino2' : 'x7casino'}.com/${l}/responsible-gaming`))
+eq('WL 18+ per language', (['en', 'fr', 'de', 'it', 'es'] as Language[]).map((l) => lockedValue(wlCfg.lockedFields[0] as LockedFieldConfig, l)),
+  ['en', 'fr', 'de', 'it', 'es'].map((l) => `https://x7casino.io/${l}/responsible-gaming`))
+const wlLegal = (wlCfg.editableFields as TemplateFieldConfig[]).find((f) => f.key === 'FOOTER_LEGAL')!
+for (const l of ['en', 'fr', 'de', 'it', 'es'] as Language[]) {
+  eq(`WL ${l} RG link default`, (wlLegal.defaultValues?.[l]?.match(/href="([^"]+)"/g) ?? []), [`href="https://x7casino.io/${l}/responsible-gaming"`])
+}
 
 // ── D7: duplicate refresh ──
 const fields = [
@@ -141,7 +163,8 @@ async function renderChecks() {
         editableFields: v2.editableFields as unknown as TemplateFieldConfig[],
         fieldValues: { en: {}, fr: {}, frca: {}, de: {}, it: {}, es: {} },
       })
-      eq(`v2 ${lang} no unresolved locked token`, /\{\{FOOTER_LOGO\d_LINK\}\}/.test(html), false)
+      eq(`v2 ${lang} no unresolved locked token`, /\{\{FOOTER_(?:LOGO\d|GAMCARE)_LINK\}\}/.test(html), false)
+      eq(`v2 ${lang} legacy template → GamCare via current links`, html.includes('href="https://www.gamcare.org.uk/"'), true)
     }
   }
 
@@ -161,10 +184,23 @@ async function renderChecks() {
     }
     const [v2Html, wlHtml] = [await r(v2), await r(wl)]
     eq(`whitelist ${lang} has no x7casino .com link`, /x7casino2?\.com/.test(wlHtml), false)
-    eq(`whitelist ${lang} links → x7casino.io`, wlHtml.includes('href="https://x7casino.io"'), true)
+    eq(`whitelist ${lang} links → x7casino.io`, /href="https:\/\/x7casino\.io[/"]/.test(wlHtml), true)
     // url fields go through sanitizeUrl (URL parse → trailing slash); locked links don't — both are the same link
     const noSlash = (h: string) => h.replaceAll('"https://x7casino.io/"', '"https://x7casino.io"')
-    eq(`whitelist ${lang} = V2 with links swapped`, noSlash(wlHtml) === toWhitelistLinks(v2Html), true)
+    // 2026-11-24: the footers differ by design (WL keeps payment logos + has its own license) → compare outside LEGAL
+    const outsideLegal = (h: string) => h.replace(/<!-- SECTION:START:LEGAL -->[\s\S]*?<!-- SECTION:END:LEGAL -->/, '')
+    eq(`whitelist ${lang} = V2 with links swapped (outside the footer)`, outsideLegal(noSlash(wlHtml)) === outsideLegal(toWhitelistLinks(v2Html)), true)
+    const legal = (h: string) => /<!-- SECTION:START:LEGAL -->[\s\S]*?<!-- SECTION:END:LEGAL -->/.exec(h)?.[0] ?? ''
+    const [bl, wlf] = [legal(v2Html), legal(wlHtml)]
+    const rg = (d: string) => `https://${d}/${lang}/responsible-gaming`
+    eq(`BL ${lang} footer: 18+ + GamCare only`, [...bl.matchAll(/alt="([^"]+)"/g)].map((m) => m[1]), ['Legal Age 18+', 'GamCare'])
+    eq(`BL ${lang} footer: no license / Kahnawake / payment`, /Starscream|Kahnawake|Payment Methods|#c80824|\{\{/i.test(bl), false)
+    eq(`BL ${lang} footer links`, [...bl.matchAll(/href="([^"]+)"/g)].map((m) => m[1]),
+      [rg(lang === 'de' ? 'x7casino2.com' : 'x7casino.com'), 'https://www.gamcare.org.uk/', rg(lang === 'de' ? 'x7casino2.com' : 'x7casino.com'), '{% unsubscribe_url %}'])
+    eq(`WL ${lang} footer: payment + 18+ + GamCare`, [...wlf.matchAll(/alt="([^"]+)"/g)].map((m) => m[1]), ['Payment Methods', 'Legal Age 18+', 'GamCare'])
+    eq(`WL ${lang} footer: Boni Tech license, no Starscream / Kahnawake`, wlf.includes('Boni Tech Limited') && !/Starscream|Kahnawake|\{\{/.test(wlf), true)
+    eq(`WL ${lang} footer links`, [...wlf.matchAll(/href="([^"]+)"/g)].map((m) => m[1]),
+      [rg('x7casino.io'), 'https://www.gamcare.org.uk/', rg('x7casino.io'), '{% unsubscribe_url %}'])
   }
 }
 
