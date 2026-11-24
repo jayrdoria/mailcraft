@@ -199,6 +199,8 @@ async function renderChecks() {
       [rg(lang === 'de' ? 'x7casino2.com' : 'x7casino.com'), 'https://www.gamcare.org.uk/', rg(lang === 'de' ? 'x7casino2.com' : 'x7casino.com'), '{% unsubscribe_url %}'])
     eq(`WL ${lang} footer: payment + 18+ + GamCare`, [...wlf.matchAll(/alt="([^"]+)"/g)].map((m) => m[1]), ['Payment Methods', 'Legal Age 18+', 'GamCare'])
     eq(`WL ${lang} footer: Boni Tech license, no Starscream / Kahnawake`, wlf.includes('Boni Tech Limited') && !/Starscream|Kahnawake|\{\{/.test(wlf), true)
+    // 2026-11-24: registered address wrapped in an href-less link so Gmail doesn't turn it into a blue Maps link
+    eq(`WL ${lang} footer: address protected from Gmail auto-link`, /<a style="color: #888888 !important; text-decoration: none !important;">10 Manoel Street, Castries, [^<]+<\/a>/.test(wlf), true)
     eq(`WL ${lang} footer links`, [...wlf.matchAll(/href="([^"]+)"/g)].map((m) => m[1]),
       [rg('x7casino.io'), 'https://www.gamcare.org.uk/', rg('x7casino.io'), '{% unsubscribe_url %}'])
   }

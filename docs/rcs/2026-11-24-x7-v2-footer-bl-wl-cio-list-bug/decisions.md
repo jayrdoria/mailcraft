@@ -72,6 +72,16 @@ Date: 2026-11-24 · Branch: `staging` · Commit: `4f7af82` · Migration: none (d
   - JSON is compared with sorted keys, because Postgres JSONB reorders keys. Without that, a re-run was not a no-op.
 - **Tested:** in a locally built `:migrate` image, on a clone restored from the pre-change dump: dry run, then pre, then post, then a re-run that changed nothing.
 
+### 7. WL registered address: stop Gmail turning it into a blue Maps link (follow-up)
+- **Problem:** Gmail auto-links "10 Manoel Street, Castries, Saint Lucia" as a blue Google Maps link. Our HTML has no link there, and head CSS cannot restyle Gmail's link because CIO strips it.
+- **Device test (Gmail web, one email per variant, with V1 confirmed blue as the control):**
+  - Still blue: `&zwnj;` (zero-width non-joiner), `&#8203;` (zero-width spaces), hidden `display:none` spans.
+  - Grey: wrapping the address in a link with no `href` (V3), and a link with `href="#"` (V4).
+- **Decision:** V3. WL `FOOTER_LICENSE` defaults (5 languages) wrap the address via `noAutoLink()` in `x7v2Whitelist.ts`: `<a style="color: #888888 !important; text-decoration: none !important;">…</a>`. Same in the WL CIO snippets.
+- **Why not V4:** a `#` link would appear in Admin → Links and could be wrapped by CIO click tracking.
+- **Caveat:** the editor (TipTap) drops links without `href`. If someone edits the WL License field by hand, the wrapper is lost and the address can turn blue again.
+- **Prod:** `seed-x7v2-footer.ts --phase=post` updates the WL license default on the next deploy (new templates only).
+
 ## Regression
 - **Baseline:** `assert-dark-mode.ts` now strips renders that the export path had already locked before testing them. The `lock(V2) == POC F` check was retired, because the V2 head and footer have moved on since the POC.
 - **New asserts:**
